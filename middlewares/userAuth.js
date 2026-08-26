@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken"
 import User from "../models/userSchema.js"
+import { CONFIG } from "../utils/constants/envConfig.js"
 
 const userAuth = async (req, res, next) => {
     try {
@@ -9,7 +10,7 @@ const userAuth = async (req, res, next) => {
             return res.redirect("/login")
         }
 
-        const decodeToken = jwt.verify(token, process.env.JWT_SECRET)
+        const decodeToken = jwt.verify(token, CONFIG.JWT_SECRET)
 
         if (!decodeToken) {
             return res.status(403).send("Access denied : user")

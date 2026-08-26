@@ -3,6 +3,7 @@ import OTP from '../models/otpSchema.js';
 import User from '../models/userSchema.js';
 import jwt from "jsonwebtoken"
 import AppError from "../utils/errorHandler.js";
+import { CONFIG } from "../utils/constants/envConfig.js";
 import { AUTH_ERRORS } from "../utils/constants/errorMessages.js";
 import { STATUS } from "../utils/constants/statusCodes.js";
 import { getReferralReward } from "../services/referralReward.js";
@@ -182,7 +183,7 @@ export const otpVerifyPost = async (req, res, next) => {
         req.session.temp = null;//CLEAR SESSION
 
         //CREATE JWT TOKEN
-        const token = jwt.sign({ id: newUser._id, username: newUser.username, role:newUser.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES })
+        const token = jwt.sign({ id: newUser._id, username: newUser.username, role:newUser.role }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES })
         //STORE JWT IN COOKIES
         res.cookie('jwt', token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 })
         return res.status(200).json({

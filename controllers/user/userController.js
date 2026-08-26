@@ -12,6 +12,7 @@ import Address from "../../models/addressSchema.js"
 import Cart from "../../models/cartSchema.js"
 import Wishlist from "../../models/wishListSchema.js"
 import Order from "../../models/orderSchema.js"
+import { CONFIG } from "../../utils/constants/envConfig.js"
 import { AUTH_ERRORS, PROFILE_ERRORS, GENERAL_ERRORS } from "../../utils/constants/errorMessages.js"
 import { STATUS } from "../../utils/constants/statusCodes.js"
 
@@ -95,7 +96,7 @@ export const handleSignupPage = async (req, res, next) => {
             phoneNumber,
             referralCode
         }
-        const token = jwt.sign({ email: email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES })
+        const token = jwt.sign({ email: email }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES })
 
         // console.log('sign up Temp session :', req.session.temp, token)
         return res.status(200).json({
@@ -169,7 +170,7 @@ export const handleLoginPage = async (req, res, next) => {
         }
 
         //GENERATING JWT TOKEN
-        const token = jwt.sign({ id: isUser._id, username: isUser.username, role: isUser.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES })
+        const token = jwt.sign({ id: isUser._id, username: isUser.username, role: isUser.role }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES })
         //STORE JWT IN COOKIES
         res.cookie('jwt', token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 })
 
@@ -443,7 +444,7 @@ export const changeEmailRequest = async (req, res, next) => {
             return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.EMAIL_NOT_VALID, field: 'email' })
         }
 
-        const baseUrl = process.env.BASE_URL
+        const baseUrl = CONFIG.BASE_URL
         //RESET URL IN A VARIBLE
         const resetURL = `${baseUrl}/new-email/${id.id}`;
 
@@ -451,14 +452,14 @@ export const changeEmailRequest = async (req, res, next) => {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: process.env.MAIL_USER,
-                pass: process.env.MAIL_PASS
+                user: CONFIG.MAIL_USER,
+                pass: CONFIG.MAIL_PASS
             },
         });
         // console.log(transporter)
         const mailOptions = {
             to: email,
-            from: process.env.MAIL_USER,
+            from: CONFIG.MAIL_USER,
             subject: 'Update Email Address - Read & Grow',
             text: `You are receiving this because you requested to update your email address.\n\n
             Please click on the following link, or paste this into your browser to complete the process:\n\n

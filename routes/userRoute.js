@@ -1,6 +1,7 @@
 import express from "express"
 const router = express.Router()
 import userAuth from "../middlewares/userAuth.js"
+import { CONFIG } from "../utils/constants/envConfig.js"
 import {
 
     resetPassword,
@@ -69,26 +70,35 @@ router.patch('/profile/:id', userAuth, editProfile)
 
 
 //UPLOAD IMAGE
-router.post("/upload-profile",userAuth, uploadProfileImage.single("profileImage"), async (req, res) => {
+router.post("/upload-profile", userAuth, (req, res, next) => {
+    const upload = uploadProfileImage.single("profileImage");
+    upload(req, res, function (err) {
+        if (err) {
+            // Multer error or invalid file type
+            return res.status(400).json({ success: false, message: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ message: "No file uploaded" });
+            return res.status(400).json({ success: false, message: "No file uploaded" });
         }
 
-        const userId = req.user; 
+        const userId = req.user.id; 
         const filePath = `/profile_images/${req.file.filename}`;
 
         // Update user profile image in database
-        const user = await User.findByIdAndUpdate(userId.id, { profileImage: filePath }, { new: true });
+        const user = await User.findByIdAndUpdate(userId, { profileImage: filePath }, { new: true });
 
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        res.json({ message: "Profile image uploaded successfully", filePath });
+        res.json({ success: true, message: "Profile image uploaded successfully", filePath });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 });
 
@@ -122,8 +132,8 @@ router.get('/auth/google/callback',
                 username:req.user.username,
                 email:req.user.email,
                 role:req.user.role,
-                }, process.env.JWT_SECRET, {
-                expiresIn: process.env.JWT_EXPIRES,
+                }, CONFIG.JWT_SECRET, {
+                expiresIn: CONFIG.JWT_EXPIRES,
             });
 
             res.cookie('jwt', token, {

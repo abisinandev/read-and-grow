@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer"
+import { CONFIG } from "./constants/envConfig.js"
 
 const mailSender = async (email, title, body) => {
     try{
@@ -7,13 +8,13 @@ const mailSender = async (email, title, body) => {
             port:587,
             secure:false, 
             auth:{
-                user:process.env.MAIL_USER,
-                pass:process.env.MAIL_PASS
+                user:CONFIG.MAIL_USER,
+                pass:CONFIG.MAIL_PASS
             }
         })
 
         let info = await transporter.sendMail({
-            from : process.env.MAIL_USER,
+            from : CONFIG.MAIL_USER,
             to : email,
             subject : title,
             html : body

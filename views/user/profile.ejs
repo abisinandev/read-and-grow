@@ -9,79 +9,118 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
-    <!-- Add Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .avatar-container:hover .avatar-overlay {
+            opacity: 1;
+        }
+        .avatar-overlay {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 
-<body class="bg-gray-300">
-    <!-- Navbar - positioned at the very top -->
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Navbar -->
     <div class="w-full">
         <%- include("../partials/user/navBar.ejs") %>
     </div>
 
     <!-- Centered Content -->
-    <div class="flex items-center justify-center min-h-[calc(100vh-64px)]">
-        <div class="bg-white w-[750px] p-8 rounded-lg shadow-lg my-10">
-            <!-- Profile Section -->
-            <div class="flex items-center justify-between mb-6">
-                <!-- Profile Image Section -->
-                <div class="relative w-32 h-32">
-                    <img id="profile-preview" src="<%= user?.profileImage || '/default-profile.png' %>" 
-                        alt="Profile Picture" 
-                        class="w-full h-full rounded-full border border-gray-300 object-cover">
-                    
-                    <!-- Hidden File Input -->
-                    <input type="file" id="profile-image" accept="image/*" class="hidden" onchange="previewImage(event)">
-                    
-                    <!-- Camera Icon for Upload -->
-                    <label for="profile-image" class="absolute bottom-0 right-0 bg-gray-700 text-white p-2 rounded-full cursor-pointer">
-                        <i class="fas fa-camera"></i>
-                    </label>
-                </div>
+    <div class="flex-grow flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl p-6 relative">
+            
+            <div class="flex justify-between items-end mb-6 border-b pb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Your Account</h2>
                 
-                <!-- Upload Button -->
-                <button id="upload-btn" class="bg-gray-600 text-white py-2 px-6 rounded-lg hover:bg-red-400 transition duration-300">
-                    Upload Profile Image
-                </button>
+                <!-- Profile Image Avatar -->
+                <div class="relative w-24 h-24 avatar-container cursor-pointer rounded-full border-2 border-gray-200 overflow-hidden" onclick="document.getElementById('profile-image').click()">
+                    <img id="profile-preview" src="<%= user?.profileImage || '/default-profile.png' %>" alt="Profile" class="w-full h-full object-cover">
+                    
+                    <!-- Hover Overlay -->
+                    <div class="avatar-overlay absolute inset-0 flex flex-col items-center justify-center text-white cursor-pointer" id="avatar-overlay">
+                        <i class="fas fa-camera text-xl"></i>
+                    </div>
+
+                    <!-- Loading Spinner Overlay -->
+                    <div id="upload-loading" class="absolute inset-0 bg-black/50 flex items-center justify-center hidden">
+                        <div class="spinner"></div>
+                    </div>
+                    
+                    <input type="file" id="profile-image" accept="image/png, image/jpeg, image/jpg" class="hidden" onchange="uploadImage(event)">
+                </div>
             </div>
 
-            <h2 class="text-xl font-semibold mb-6">Your Account</h2>
-            <div class="flex">
+            <div class="flex gap-6 mt-6">
                 <!-- Sidebar -->
                 <%- include("../partials/user/sideBar.ejs") %>
 
-                <!-- Profile Form -->
-                <div class="w-2/3 pl-6">
-                    <div class="flex flex-col space-y-4">
-                        <!-- Form for Username and Mobile Number -->
-                        <form id="profile-form" class="flex flex-col space-y-4">
-                            <div class="mb-4">
-                                <label class="block text-gray-700">Username</label>
-                                <input type="text" name="username" value="<%= user.username %>" readonly
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                <!-- Form Section -->
+                <div class="w-2/3" id="profile-content">
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 relative">
+                        
+                        <div class="flex justify-between items-center mb-5">
+                            <h3 class="text-base font-semibold text-gray-700">Profile Details</h3>
+                            <button onclick="toggleEditMode()" id="edit-toggle-btn" class="text-sm bg-gray-800 text-white px-4 py-1.5 rounded-md hover:bg-gray-700 transition">
+                                Edit Profile
+                            </button>
+                        </div>
+
+                        <form id="profile-form" class="space-y-4">
+                            <input type="text" id="userId" value="<%= user._id %>" hidden>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                <input type="text" id="username" name="username" value="<%= user.username %>" readonly
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 text-sm focus:outline-none transition">
                             </div>
-                            <div class="flex-1 mb-4">
-                                <label class="block text-gray-700">Email</label>
-                                <input type="email" value="<%= user.email %>" readonly name="email" required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <div class="flex gap-2">
+                                    <input type="email" value="<%= user.email %>" readonly disabled
+                                        class="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-200/60 text-gray-500 text-sm focus:outline-none cursor-not-allowed">
+                                    <button type="button" onclick="window.location.href='/change-email/<%= user._id %>'" class="bg-gray-200 text-gray-700 px-3 rounded-lg text-sm font-medium hover:bg-gray-300 transition whitespace-nowrap hidden" id="change-email-btn">
+                                        Change Email
+                                    </button>
+                                </div>
                             </div>
-                            <div class="mb-4">
-                                <label class="block text-gray-700">Mobile Number</label>
-                                <input type="text" value="<%= user.phoneNumber %>" readonly name="mobile" required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                                <input type="text" id="mobile" name="mobile" value="<%= user.phoneNumber %>" readonly
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 text-sm focus:outline-none transition">
+                                <p id="errField" class="text-red-500 text-xs mt-1 hidden"></p>
                             </div>
+
                             <% if(user.referralCode){%>
-                            <div class="mb-4">
-                                <label class="block text-gray-700">Referral code</label>
-                                <input type="text" value="<%= user.referralCode %>" readonly name="referalCode" required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Referral Code</label>
+                                <input type="text" value="<%= user.referralCode %>" readonly disabled
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-200/60 text-gray-500 text-sm focus:outline-none cursor-not-allowed">
                             </div>
                             <% } %>
-                            <div class="flex justify-end">
-                                <button type="button" onclick="editData('<%= JSON.stringify(user) %>')"
-                                    class="bg-gray-600 text-white py-2 px-6 rounded-lg hover:bg-gray-700 transition duration-300">
-                                    Edit
+
+                            <div id="save-actions" class="hidden flex justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
+                                <button type="button" onclick="cancelEdit()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                                    Cancel
+                                </button>
+                                <button type="submit" id="save-btn" class="px-5 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+                                    Save Changes
                                 </button>
                             </div>
                         </form>
@@ -91,168 +130,189 @@
         </div>
     </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-        <script>
- 
-            function showToast(message, type = 'error') {
-                Toastify({
-                    text: message,
-                    duration: 2000,
-                    gravity: "top",
-                    position: "center",
-                    backgroundColor: type === 'success' ? "#16a34a" : "#dc2626", // green-600 for success, red-600 for error
-                    stopOnFocus: true,
-                }).showToast();
-            }
-
-            async function editData(user) {
-                const form = document.getElementById('profile-form');
-
-                form.innerHTML = '';
-
-                const formContainer = document.createElement('div');
-                formContainer.innerHTML = `
-                    <div class="w-2/3 pl-6">
-                        <div class="text-xl font-semibold mb-6">Edit Profile</div>
-                        <div>
-                            <form id="editedForm" class="space-y-4">
-                                <input type="text" id="userId" name="userId" value="<%= user._id %>" hidden>
-                                <div class="mb-4">
-                                    <label class="block text-gray-700">Username</label>
-                                    <input type="text" name="username" value="<%= user.username %>"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
-                                </div>
-                                <div class="mb-6">
-                                    <label class="block text-gray-700">Mobile Number</label>
-                                    <input type="text" name="mobile" value="<%= user.phoneNumber %>" required
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
-                                    <div id="errField" class="text-red-600"></div>
-                                </div>
-                                <button type="submit"
-                                    class="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-gray-700 transition duration-300">
-                                    Save
-                                </button>
-                            </form>
-                        </div>
-                        <div class="mt-4">
-                            <button type="button" onclick="window.location.href='/change-email/<%= user._id %>'"
-                                class="bg-gray-600 text-white py-2 px-6 rounded-lg hover:bg-gray-700 transition duration-300">
-                                Change email
-                            </button>
-                        </div>
-                    </div>
-
-                `;
-
-                form.appendChild(formContainer);
-
-                const editedForm = form.querySelector('#editedForm');
-                console.log(editedForm);
-
-                editedForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-
-                    const form = document.getElementById('editedForm');
-                    const formData = new FormData(form);
-
-                    let userData = {
-                        username: formData.get('username').trim(),
-                        // email: formData.get('email'),
-                        phoneNumber: formData.get("mobile").trim()
-                    };
-                    
-                    if (!userData.username || !userData.phoneNumber) {
-                        showToast('Please make changes if you want to update');
-                        return;
-                    }
-                   
-                    const pattern = /^\d{10}$/;
-                    const isValid = pattern.test(userData.phoneNumber)
-                    if(!isValid){
-                        const error=document.getElementById('errField');
-                        error.innerHTML="Phone number must be 10 digits"
-                        return;
-                    }
-                     
-                    
-                    try {
-                        const id = document.getElementById('userId').value;
-                        const url = `/profile/${id}`;
-                        const response = await fetch(url, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(userData)
-                        });
-
-                        const result = await response.json();
-                        if (!response.ok) {
-                            throw new Error(result.message || "Failed to update profile");
-                        }
-
-                        showToast("Profile updated successfully", "success");
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
-                    } catch (error) {
-                        console.error('Error updating profile:', error);
-                        showToast(error.message || 'An error occurred while updating profile');
-                    }
-                });
-            }
- 
-            document.getElementById('editButton')?.addEventListener('click', (e) => {
-                e.preventDefault();  
-                const user = {
-                    _id: "123",
-                    username: "john_doe",
-                    email: "john@example.com",
-                    phoneNumber: "123-456-7890"
-                };
-                editData(user);
-            });
-
-            function previewImage(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function () {
-            document.getElementById("profile-preview").src = reader.result;
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script>
+        const originalData = {
+            username: "<%= user.username %>",
+            mobile: "<%= user.phoneNumber %>"
         };
-        reader.readAsDataURL(file);
-    }
 
-    document.getElementById("upload-btn").addEventListener("click", function () {
-        const fileInput = document.getElementById("profile-image");
-        if (fileInput.files.length === 0) {
-            Swal.fire("Error", "Please select an image first!", "error");
-            return;
+        function showToast(message, type = 'error') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
+                stopOnFocus: true,
+            }).showToast();
         }
 
-        const formData = new FormData();
-        formData.append("profileImage", fileInput.files[0]);
+        // TOGGLE EDIT MODE
+        function toggleEditMode() {
+            const inputs = [document.getElementById('username'), document.getElementById('mobile')];
+            const isEditing = !inputs[0].hasAttribute('readonly');
 
-        fetch("/upload-profile", {
-            method: "POST",
-            body: formData,
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.filePath) {
-                document.getElementById("profile-preview").src = data.filePath;
-                Swal.fire("Success", "Profile image updated successfully!", "success");
-            } else {
-                Swal.fire("Error", data.message || "Something went wrong!", "error");
+            if (isEditing) {
+                cancelEdit();
+                return;
             }
-        })
-        .catch(err => {
-            console.error(err);
-            Swal.fire("Error", "Failed to upload image!", "error");
+
+            // Enable inputs
+            inputs.forEach(input => {
+                input.removeAttribute('readonly');
+                input.classList.remove('bg-gray-100', 'text-gray-600');
+                input.classList.add('bg-white', 'text-gray-800', 'focus:ring-2', 'focus:ring-gray-400');
+            });
+
+            document.getElementById('edit-toggle-btn').classList.add('hidden');
+            document.getElementById('save-actions').classList.remove('hidden');
+            document.getElementById('save-actions').classList.add('flex');
+            document.getElementById('change-email-btn').classList.remove('hidden');
+        }
+
+        function cancelEdit() {
+            const inputs = [document.getElementById('username'), document.getElementById('mobile')];
+            
+            // Revert values
+            document.getElementById('username').value = originalData.username;
+            document.getElementById('mobile').value = originalData.mobile;
+            document.getElementById('errField').classList.add('hidden');
+
+            // Disable inputs
+            inputs.forEach(input => {
+                input.setAttribute('readonly', 'true');
+                input.classList.add('bg-gray-100', 'text-gray-600');
+                input.classList.remove('bg-white', 'text-gray-800', 'focus:ring-2', 'focus:ring-gray-400');
+            });
+
+            document.getElementById('edit-toggle-btn').classList.remove('hidden');
+            document.getElementById('save-actions').classList.add('hidden');
+            document.getElementById('save-actions').classList.remove('flex');
+            document.getElementById('change-email-btn').classList.add('hidden');
+        }
+
+        // SAVE PROFILE DETAILS
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const mobile = document.getElementById('mobile').value.trim();
+            const errField = document.getElementById('errField');
+            errField.classList.add('hidden');
+
+            if (!username || !mobile) {
+                showToast('Fields cannot be empty');
+                return;
+            }
+
+            if (username === originalData.username && mobile === originalData.mobile) {
+                showToast('No changes made', 'success');
+                cancelEdit();
+                return;
+            }
+
+            const mobilePattern = /^\d{10}$/;
+            if (!mobilePattern.test(mobile)) {
+                errField.textContent = "Phone number must be exactly 10 digits";
+                errField.classList.remove('hidden');
+                return;
+            }
+
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Saving...';
+
+            try {
+                const id = document.getElementById('userId').value;
+                const response = await fetch(`/profile/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, phoneNumber: mobile })
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    if (result.field === 'phoneNumber' || result.field === 'username') {
+                        errField.textContent = result.message;
+                        errField.classList.remove('hidden');
+                    } else {
+                        showToast(result.message || "Failed to update profile");
+                    }
+                    return;
+                }
+
+                showToast("Profile updated successfully", "success");
+                originalData.username = username;
+                originalData.mobile = mobile;
+                
+                // Update navbar username if present (optional UI polish)
+                const navName = document.querySelector('.nav-username');
+                if(navName) navName.textContent = username;
+
+                cancelEdit();
+
+            } catch (error) {
+                console.error(error);
+                showToast('An unexpected error occurred');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Save Changes';
+            }
         });
-    });
 
+        // DIRECT IMAGE UPLOAD
+        async function uploadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-        </script>
+            // Optional client side mime check (backend will also validate)
+            const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+            if (!validTypes.includes(file.type)) {
+                Swal.fire("Invalid File", "Please upload a valid image (JPG, JPEG, PNG).", "error");
+                event.target.value = ''; // Reset
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                Swal.fire("File too large", "Image must be under 5MB.", "error");
+                event.target.value = ''; 
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("profileImage", file);
+
+            // Show loading state
+            document.getElementById('avatar-overlay').classList.add('hidden');
+            document.getElementById('upload-loading').classList.remove('hidden');
+
+            try {
+                const response = await fetch("/upload-profile", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Update preview
+                    document.getElementById("profile-preview").src = data.filePath;
+                    showToast("Profile image updated!", "success");
+                } else {
+                    Swal.fire("Upload Failed", data.message || "Something went wrong!", "error");
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire("Error", "Failed to communicate with server.", "error");
+            } finally {
+                // Remove loading state
+                document.getElementById('upload-loading').classList.add('hidden');
+                document.getElementById('avatar-overlay').classList.remove('hidden');
+                event.target.value = ''; // Reset input
+            }
+        }
+    </script>
 </body>
-
 </html>
