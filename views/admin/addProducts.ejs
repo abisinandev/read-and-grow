@@ -365,14 +365,19 @@
                 formData.append('price', price);
                 formData.append('stock', stock);
     
+                const fileType = ['jpeg', 'jpg', 'png', 'webp'];
                 let hasImages = false;
+
                 for (let i = 1; i <= 3; i++) {
                     const input = document.getElementById(`image${i}`);
+                    
                     if (input.files?.[0]) {
-                        // Optional: Add image size validation (e.g., max 5MB)
-                        if (input.files[0].size > 5 * 1024 * 1024) {
+                        const file = input.files[0];
+                        const extension = file.name.split('.').pop().toLowerCase();
+
+                        if (!fileType.includes(extension)) {
                             Toastify({
-                                text: `Image ${i} must be less than 5MB`,
+                                text: `${extension.toUpperCase()} is an invalid file type.`,
                                 duration: 3000,
                                 gravity: "top",
                                 position: "right",
@@ -380,23 +385,24 @@
                             }).showToast();
                             return;
                         }
-                        formData.append('images', input.files[0]);
-                        hasImages = true;
-                    }
 
-                    const fileType=['jpeg','jpg','png','webp']  
-                    const extension = input.value.split('.').pop().toLowerCase();
-                    if(!fileType.includes(extension)){
-                        Toastify({
-                                text: `${extension} is invalid file type,`,
+
+                        if (file.size > 5 * 1024 * 1024) {
+                            Toastify({
+                                text: `Image ${i} must be less than 5MB.`,
                                 duration: 3000,
                                 gravity: "top",
                                 position: "right",
                                 backgroundColor: "#f44336"
                             }).showToast();
                             return;
+                        }
+
+                        formData.append('images', file);
+                        hasImages = true;
                     }
                 }
+
     
                 if (!hasImages) {
                     Toastify({

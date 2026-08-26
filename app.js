@@ -28,10 +28,6 @@ import User from "./models/userSchema.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-//========DATABASE===========
-const PORT = process.env.PORT || 3999 // PORT
-connectDb()//CALLING DB
-
 const app = express()
 app.set("views", path.resolve("views"))//VIEW ENGIVE SETUP
 app.set("view engine", "ejs")
@@ -79,7 +75,6 @@ app.use((err, req, res, next) => {
         message:"Something went wrong" }); 
 }); 
    
-// console.log("PROCESS ID :",process.pid)//CURRENCT PROCESS ID
 
 //THIS FOR CLOSE SERVER CLEANLY INSTEAD OF FORCEFULLY QUITTING
 process.on('SIGINT', () => {
@@ -97,4 +92,6 @@ app.get('/notFound', (req, res) => {
 app.get('*', (req, res) => {
     res.status(404).render('admin/notFound')
 })
-app.listen(PORT, () => console.log(`Server started running with ${PORT}`));//RUNNING SERVER
+
+
+export default app;
