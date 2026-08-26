@@ -101,9 +101,8 @@ export const otpVerifyPost = async (req, res, next) => {
             //     })
             // } 
 
-            //EXPIRY TIME
-            const expire = Date.now() + 30 * 1000
-            if (getOtp[0].createdAt.getTime() > expire) {
+            //EXPIRY TIME (30 seconds)
+            if (Date.now() - getOtp[0].createdAt.getTime() > 30 * 1000) {
                 return res.status(400).json({
                     success: false,
                     message: "OTP is expired. Please create new"
@@ -142,27 +141,27 @@ export const otpVerifyPost = async (req, res, next) => {
         const getOtp = await OTP.find({ email: email }).sort({ createdAt: -1 }).limit(1)
         console.log("getOtp : ", getOtp)
 
-        if (!getOtp[0].otp.length) {
+        if (!getOtp || getOtp.length === 0) {
             return res.status(400).json({
                 success: false,
                 message: "Otp is not valid"
             })
         }
 
-        const expire = Date.now() + 30 * 1000
-        if (getOtp.createdAt > expire) {
+        //EXPIRY TIME (30 seconds)
+        if (Date.now() - getOtp[0].createdAt.getTime() > 30 * 1000) {
             return res.status(400).json({
                 success: false,
                 message: "OTP is expired. Please create new"
             })
         }
 
-        // if (getOtp[0].otp !== otp) {
-        //     return res.status(400).json({
-        //         success:false,
-        //         message:"Otp is not valid"
-        //     })
-        // }
+        if (getOtp[0].otp.toString() !== otp.toString()) {
+            return res.status(400).json({
+                success:false,
+                message:"Otp is not valid"
+            })
+        }
 
         //CREATE NEW USER 
         const newUser = new User({

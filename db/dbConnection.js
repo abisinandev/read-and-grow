@@ -1,10 +1,8 @@
 import mongoose from "mongoose"
-import express from "express"
 import dotenv from "dotenv"
 dotenv.config()
 
 const localDB = process.env.DB_CONNECTION // db connection link from .env
-// console.log(localDB)
 
 const connectDb = async () => {
     try {

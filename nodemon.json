@@ -1,4 +1,3 @@
 {
-    "ignore": ["data/orders.json"]
-  }
-  
+    "ignore": ["orders.json", "data/orders.json", "*.json", "public/*"]
+}

@@ -220,15 +220,15 @@ const getCategoryBasedSales = async (dateFilter) => {
 
 const getTopSelledItems = async (dataFilter) => {
     const allOrders = await Order.aggregate([
-        {$match:dataFilter},
-        {$unwind:"$items"},
-        {$group:{_id:"$items.productId",totalQty:{$sum:"$items.quantity"}}},
-        {$sort:{"totalQty":-1}},
-        {$limit:3},
+        { $match: dataFilter },
+        { $unwind: "$items" },
+        { $group: { _id: "$items.productId", totalQty: { $sum: "$items.quantity" } } },
+        { $sort: { "totalQty": -1 } },
+        { $limit: 3 },
     ])
 
     const topProducts = []
-    for(let order of allOrders){
+    for (let order of allOrders) {
         const products = await Product.findById(order._id)
         topProducts.push(products)
     }
@@ -238,8 +238,7 @@ const getTopSelledItems = async (dataFilter) => {
 
 
 
- 
 
 
 
- 
+

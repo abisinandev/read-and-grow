@@ -40,7 +40,11 @@ export const handleSignupPage = async (req, res, next) => {
         // console.log(req.body)
         console.log(referralCode)
 
-        let StrongPassword = (password === confirmPassword) ? password : false;
+        if (password !== confirmPassword) {
+            return res.status(400).json({ success: false, message: "Passwords do not match" })
+        }
+        
+        let StrongPassword = password; // Passwords already match, so we can use it
 
         //VALIDATION
         if (!username || !email || !phoneNumber || !password || !confirmPassword) {
@@ -52,15 +56,8 @@ export const handleSignupPage = async (req, res, next) => {
 
         //REFERRAL CODE VALDATION
         if (referralCode) {
-            const users = await User.find()
-            let flag = false
-            for (let user of users) {
-                if (user.referralCode === referralCode) {
-                    console.log("Referral code is valid")
-                    flag = true
-                }
-            }
-            if (!flag) {
+            const isValidReferral = await User.findOne({ referralCode });
+            if (!isValidReferral) {
                 return res.status(404).json({ success: false, message: "Invalid referral code" })
             }
         }

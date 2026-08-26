@@ -18,11 +18,7 @@ import { count } from "console"
 
 
 
-
-
 //==========================CHECKOUT MANAGEMENT===============================
-
-
 export const renderCheckoutPage = async (req, res, next) => {
     try {
         const user = req.user

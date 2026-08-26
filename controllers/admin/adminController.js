@@ -324,7 +324,7 @@ export const editCategoryPatch = async (req, res, next) => {
     }
 }
 
-//==search category
+//============search category=================
 export const searchCategory = async (req, res, next) => {
     try {
         const { q } = req.query
@@ -573,7 +573,7 @@ export const deleteProduct = async (req, res, next) => {
     }
 }
 
-//======block procuct
+//======block procuct======================
 export const blockProduct = async (req, res, next) => {
     try {
         const productId = req.params.id

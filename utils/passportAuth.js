@@ -10,7 +10,7 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: "https://readandgrow.space/auth/google/callback",
+            callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3999/auth/google/callback",
             passReqToCallback: true,
         },
 
@@ -31,15 +31,20 @@ passport.use(
                 return done(null,exist)
             }
             
-            await User.create({
+            let newUserPayload = {
                 username: profile.displayName,
                 email: profile.emails[0].value,
                 googleId: profile.id,
                 isBlocked: false,
                 isEmailVerfied: true,
                 role: 'user',
-                phoneNumber :profile?.phone || 'No password provided'
-            });
+            };
+
+            if (profile?.phone) {
+                newUserPayload.phoneNumber = profile.phone;
+            }
+
+            await User.create(newUserPayload);
 
 
             const googleUser = await User.findOne({ email: profile["emails"][0].value });

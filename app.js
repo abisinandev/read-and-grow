@@ -1,47 +1,43 @@
 import express from "express"
-import connectDb from './db/dbConnection.js';
 import dotenv from "dotenv"
 import path from "path";
 import session from "express-session";
 import cors from "cors"
-dotenv.config()//ENV FILE CONFIGURATION
 import morgan from "morgan";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import passport from "./utils/passportAuth.js";
 import MongoStore from "connect-mongo"
 
 import adminRoutes from "./routes/adminRoute.js"
 import userRoute from "./routes/userRoute.js"
-import otpRoute from "./routes/otpRoute.js" 
-import ordersRoute from "./routes/ordersRoute.js" 
+import otpRoute from "./routes/otpRoute.js"
+import ordersRoute from "./routes/ordersRoute.js"
 import shopingCartRoute from "./routes/shopingCartRoute.js"
 
-// import { errorHandling } from "./middlewares/error_handling.js";
 import nocache from "nocache";
 import { fileURLToPath } from "url";
-import { error } from "console";
-import AppError from "./utils/errorHandler.js";
 import cookieParser from "cookie-parser";
 import methodOverride from "method-override"
-import User from "./models/userSchema.js";
- 
+
+dotenv.config()//ENV FILE CONFIGURATION
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express()
-app.set("views", path.resolve("views"))//VIEW ENGIVE SETUP
+app.set("views", path.resolve("views"))//VIEW ENGINE SETUP
 app.set("view engine", "ejs")
-app.use(express.static(path.join(__dirname, "public")))  
- 
+app.use(express.static(path.join(__dirname, "public")))
+
 app.use(cookieParser())
 app.use(express.json())//PARSE JSON DATAS
 app.use(express.urlencoded({ extended: true }))//SUBMIT FORMS..
 app.use(nocache())
+app.use(methodOverride('_method'))
 
 //STORE SESSION IN DB FOR PERSISTENCE
-app.use(session({ 
+app.use(session({
     secret: process.env.SESSION_SCERET,
-resave: false,
+    resave: false,
     saveUninitialized: true,
     cookie: { secure: false },
     store: MongoStore.create({
@@ -49,7 +45,7 @@ resave: false,
         collectionName: 'sessions', // Collection where sessions will be stored
         ttl: 1 * 60 * 60 // Session expiration time in seconds (14 days)
     }),
-})) 
+}))
 
 app.use(cors())
 app.use(morgan("dev"))//LOG EACH API CALLS
@@ -61,31 +57,21 @@ app.use("/admin", adminRoutes)
 app.use("/", userRoute)
 app.use("/", ordersRoute)
 app.use("/", shopingCartRoute)
-app.use("/otp",otpRoute)
-app.use(methodOverride('_method'))
+app.use("/otp", otpRoute)
 
 //ERROR HANDLING MIDDLERWARE CLASS APPERROR
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || 500;
     const message = err.message || "Internal Server error";
     console.error(`Error: ${message}, statusCode :${statusCode}`);
-    
-    return res.status(statusCode).json({
-        success:false, 
-        message:"Something went wrong" }); 
-}); 
-   
 
-//THIS FOR CLOSE SERVER CLEANLY INSTEAD OF FORCEFULLY QUITTING
-process.on('SIGINT', () => {
-    console.log("Closing server..."); 
-    process.exit();
+    return res.status(statusCode).json({
+        success: false,
+        message: "Something went wrong"
+    });
 });
 
 
-app.get('/',(req,res)=>{
-    res.redirect('/')
-})
 app.get('/notFound', (req, res) => {
     res.render('admin/notFound')
 })

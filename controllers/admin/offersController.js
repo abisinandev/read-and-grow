@@ -18,12 +18,12 @@ export const renderOffersPage = async (req, res, next) => {
             .populate('categoryId')
 
         // console.log("offers :", offers)
-        
+
         const products = await Product.find()
-        .populate('offers')
+            .populate('offers')
         const categories = await Category.find()
-        .populate('offers')
-        
+            .populate('offers')
+
         let currentDate = new Date
         for (let offer of offers) {
             if (currentDate > offer.validTo) {
@@ -36,19 +36,19 @@ export const renderOffersPage = async (req, res, next) => {
         for (let product of products) {
             let productOffer = (product.offers.length > 0) ?
                 product.offers.filter(o => o.status !== false)
-                    .reduce((acc, curr) => curr.discountPercentage > acc.discountPercentage ? curr: acc, { discountPercentage: 0 }) : null
-                    console.log('productOffers', productOffer)
-   
+                    .reduce((acc, curr) => curr.discountPercentage > acc.discountPercentage ? curr : acc, { discountPercentage: 0 }) : null
+            console.log('productOffers', productOffer)
+
             let categoryOffer
             for (let category of categories) {
                 if (category.categoryName === product.category) {
                     categoryOffer = (category?.offers.length > 0) ?
                         category.offers.filter(o => o.status !== false)
-                         .reduce((acc, curr) => curr.discountPercentage > acc.discountPercentage ? curr : acc, { discountPercentage: 0 }) : null;
-                } 
+                            .reduce((acc, curr) => curr.discountPercentage > acc.discountPercentage ? curr : acc, { discountPercentage: 0 }) : null;
+                }
             }
-            console.log(categoryOffer,'category offer')
-           
+            console.log(categoryOffer, 'category offer')
+
             productOffer = productOffer && productOffer.discountPercentage > 0 ? productOffer : null;
             categoryOffer = categoryOffer && categoryOffer.discountPercentage > 0 ? categoryOffer : null;
 
@@ -58,14 +58,14 @@ export const renderOffersPage = async (req, res, next) => {
                 bestOffer = productOffer || categoryOffer;
             }
 
-            if(bestOffer){
+            if (bestOffer) {
                 await Product.findByIdAndUpdate(product._id, { $set: { bestOffer: bestOffer?.discountPercentage } })
-            }else{
+            } else {
                 await Product.findByIdAndUpdate(product._id, { $unset: { bestOffer: "" } })
             }
             console.log("product with Bestoffer:", bestOffer);
- 
-          
+
+
         }
 
 
