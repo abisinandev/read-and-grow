@@ -65,9 +65,18 @@ app.use((err, req, res, next) => {
     const message = err.message || "Internal Server error";
     console.error(`Error: ${message}, statusCode :${statusCode}`);
 
-    return res.status(statusCode).json({
+    if (err.isOperational) {
+        return res.status(statusCode).json({
+            success: false,
+            message: message,
+            field: err.field || null
+        });
+    }
+
+    //UNEXPECTED ERRORS CATHING
+    return res.status(500).json({
         success: false,
-        message: "Something went wrong"
+        message: "Something went wrong. Please try again"
     });
 });
 

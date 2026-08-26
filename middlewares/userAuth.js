@@ -15,8 +15,11 @@ const userAuth = async (req, res, next) => {
             return res.status(403).send("Access denied : user")
         }
 
-        if(decodeToken.role === 'user'){
+        if (decodeToken.role === 'user') {
             req.user = decodeToken
+        } else {
+            //REDIRECT NON-USER ROLES BACK TO LOGIN
+            return res.redirect('/login')
         }
         const isBlocked = await User.findById(req.user.id)
         // console.log(isBlocked)

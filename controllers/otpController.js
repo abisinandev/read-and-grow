@@ -3,7 +3,8 @@ import OTP from '../models/otpSchema.js';
 import User from '../models/userSchema.js';
 import jwt from "jsonwebtoken"
 import AppError from "../utils/errorHandler.js";
-import { content_v2_1 } from "googleapis";
+import { AUTH_ERRORS } from "../utils/constants/errorMessages.js";
+import { STATUS } from "../utils/constants/statusCodes.js";
 import { getReferralReward } from "../services/referralReward.js";
 
 export const sendOTP = async (email) => {
@@ -13,7 +14,7 @@ export const sendOTP = async (email) => {
         if (checkUserPresent) {
             return {
                 success: false,
-                message: "User already exists"
+                message: AUTH_ERRORS.USERNAME_TAKEN
             }
         }
 
@@ -52,7 +53,7 @@ export const sendOTP = async (email) => {
         console.log(error.message)
         return {
             success: false,
-            message: "failed to send OTP",
+            message: AUTH_ERRORS.OTP_SEND_FAILED,
             error: error.message
         }
     }
@@ -78,9 +79,9 @@ export const otpVerifyPost = async (req, res, next) => {
         console.log("otp : ", otp)
 
         if (!req.session.temp && !req.session.update) {
-            return res.status(400).json({ 
+            return res.status(STATUS.BAD_REQUEST).json({ 
                 success: false,
-                message: "Session expired" 
+                message: AUTH_ERRORS.SESSION_EXPIRED
             })
         } 
 
@@ -103,16 +104,16 @@ export const otpVerifyPost = async (req, res, next) => {
 
             //EXPIRY TIME (30 seconds)
             if (Date.now() - getOtp[0].createdAt.getTime() > 30 * 1000) {
-                return res.status(400).json({
+                return res.status(STATUS.BAD_REQUEST).json({
                     success: false,
-                    message: "OTP is expired. Please create new"
+                    message: AUTH_ERRORS.OTP_EXPIRED
                 })
             }
 
             if (getOtp[0].otp.toString() !== otp.toString()) {
-                return res.status(400).json({
+                return res.status(STATUS.BAD_REQUEST).json({
                     success: false,
-                    message: "Otp is not valid"
+                    message: AUTH_ERRORS.INVALID_OTP
                 })
             }
 
@@ -142,24 +143,24 @@ export const otpVerifyPost = async (req, res, next) => {
         console.log("getOtp : ", getOtp)
 
         if (!getOtp || getOtp.length === 0) {
-            return res.status(400).json({
+            return res.status(STATUS.BAD_REQUEST).json({
                 success: false,
-                message: "Otp is not valid"
+                message: AUTH_ERRORS.INVALID_OTP
             })
         }
 
         //EXPIRY TIME (30 seconds)
         if (Date.now() - getOtp[0].createdAt.getTime() > 30 * 1000) {
-            return res.status(400).json({
+            return res.status(STATUS.BAD_REQUEST).json({
                 success: false,
-                message: "OTP is expired. Please create new"
+                message: AUTH_ERRORS.OTP_EXPIRED
             })
         }
 
         if (getOtp[0].otp.toString() !== otp.toString()) {
-            return res.status(400).json({
+            return res.status(STATUS.BAD_REQUEST).json({
                 success:false,
-                message:"Otp is not valid"
+                message: AUTH_ERRORS.INVALID_OTP
             })
         }
 
@@ -192,7 +193,7 @@ export const otpVerifyPost = async (req, res, next) => {
   
     } catch (error) {
         console.log(error.message)
-        next(new AppError(`otp verfication failed : ${error}`, 500))
+        next(new AppError(`otp verfication failed : ${error}`, STATUS.INTERNAL_SERVER_ERROR))
     }
 }
  
