@@ -63,9 +63,9 @@ router.get('/search-category', adminAuth, searchCategory)
 //PRODUCT MANAGMENT
 router.get("/products", adminAuth, renderProductPage)
 router.get("/add-products", adminAuth, addProducts)
-router.post("/add-products", upload.array('images', 3), addProductsPost)
+router.post("/add-products", adminAuth, upload.array('images', 3), addProductsPost)
 router.get('/product/:id', adminAuth, editProductsGet)
-router.patch("/product/:id", upload.array('images', 3), editProduct)
+router.patch("/product/:id", adminAuth, upload.array('images', 3), editProduct)
 router.delete('/product/:id', adminAuth, deleteProduct)
 router.put('/block-product/:id', adminAuth, blockProduct)
 

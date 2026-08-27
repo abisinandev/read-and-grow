@@ -587,7 +587,8 @@ export const addAddress = async (req, res, next) => {
 
         return res.status(200).json({
             success: true,
-            message: "Address added successfully."
+            message: "Address added successfully.",
+            address: newAddress
         })
 
     } catch (error) {

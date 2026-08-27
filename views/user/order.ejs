@@ -99,9 +99,12 @@
             </div>
 
             <!-- Order Total -->
+            <% const allCancelled = order.items && order.items.length > 0 && order.items.every(item => item.status === 'Cancelled'); %>
+            <% if (!allCancelled) { %>
             <div class="mt-3 text-right">
               <p class="text-gray-800 font-semibold">Total: Rs. <%= (order.totalAmount).toFixed(2) %></p>
             </div>
+            <% } %>
           </div>
         <% }) %>
 

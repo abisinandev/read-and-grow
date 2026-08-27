@@ -1,11 +1,6 @@
 import mongoose from "mongoose"
-import bcrypt from "bcrypt"
 import User from "../../models/userSchema.js"
-import jwt from "jsonwebtoken"
-import OTP from "../../models/otpSchema.js"
-import { sendOTP } from "../otpController.js"
 import AppError from "../../utils/errorHandler.js"
-import { appengine } from "googleapis/build/src/apis/appengine/index.js"
 import Product from "../../models/productSchema.js"
 import Category from "../../models/categorySchema.js"
 import Address from "../../models/addressSchema.js"
@@ -14,7 +9,6 @@ import Wishlist from "../../models/wishListSchema.js"
 import Order from "../../models/orderSchema.js"
 import Offer from "../../models/offersSchema.js"
 import Coupon from "../../models/couponSchema.js"
-import { count } from "console"
 
 
 
@@ -23,7 +17,14 @@ export const renderCheckoutPage = async (req, res, next) => {
     try {
         const user = req.user
         const cartId = req.params.id
-        const address = await Address.find({ userId: user.id })
+        const rawAddresses = await Address.find({ userId: user.id })
+
+        const defaultIdx = rawAddresses.findIndex(a => a.isDefault);
+        const selectedIdx = defaultIdx >= 0 ? defaultIdx : 0;
+        const address = rawAddresses.map((a, i) => ({
+            ...a.toObject(),
+            isSelected: i === selectedIdx
+        }))
 
         const userCart = await Cart.findById(cartId)//FETCH CART DATA
 
@@ -33,24 +34,11 @@ export const renderCheckoutPage = async (req, res, next) => {
         }
 
         const offers = await Offer.find()
-        let currentDate = new Date()
-        //UNLIST EXPIRED OFFERS
-        for (let offer of offers) {
-            if (currentDate > offer.validTo) {
-                await Offer.findByIdAndUpdate(offer._id, { $set: { status: false } })
-            }
-        }
 
-        //FIDN COUPON UNUSED COUPON
-        const coupons = await Coupon.find({ isActive: true, isUsed: { $nin: [user.id] } })
+        const now = new Date()
+        const allCoupons = await Coupon.find({ isActive: true, isUsed: { $nin: [user.id] } })
             .sort({ createdAt: -1 })
-
-        //UNLIST EXPIRED COUPONS
-        for (let coupon of coupons) {
-            if (currentDate > coupon.expiryDate) {
-                await Coupon.findByIdAndUpdate(coupon._id, { $set: { isActive: false } })
-            }
-        }
+        const coupons = allCoupons.filter(c => now <= c.expiryDate)
 
         let subTotal = 0
         let totalDiscount = 0
@@ -147,7 +135,7 @@ export const confirmOrder = async (req, res, next) => {
         let address = "";
 
         if (addressId) {
-        address = await Address.findById(addressId) || "";
+            address = await Address.findById(addressId) || "";
         }
         console.log('Delivery Address :', address)
 
@@ -170,7 +158,13 @@ export const confirmOrder = async (req, res, next) => {
 
         const cart = await Cart.findOne({ userId: user?.id })
 
-        let items = []
+        // Two passes on purpose: validate every cart item FIRST, then only mutate stock once
+        // everything has passed. Doing the stock decrement inside the same loop as validation
+        // meant that if item #3 (say) failed its stock check, items #1 and #2 had already had
+        // their stock permanently decremented and saved — with no order ever created to back
+        // it, and the cart left untouched. That's a real inventory leak on every checkout that
+        // fails partway through.
+        const products = []
         for (let item of cart.items) {
             const product = await Product.findById(item.productId)
 
@@ -187,22 +181,21 @@ export const confirmOrder = async (req, res, next) => {
                 })
             }
 
-            // const discountPriceEachProduct = (product.bestOffer / 100) * product.price || 0
-            // console.log(discountPriceEachProduct)
+            products.push({ product, quantity: item.quantity })
+        }
 
+        let items = []
+        for (let { product, quantity } of products) {
             items.push({
                 productId: product._id,
                 productName: product.name,
                 price: Number(product.price),
-                quantity: item.quantity,
-                discountPrice: Number((product.bestOffer/100)*product.price) || 0
+                quantity: quantity,
+                discountPrice: Number((product.bestOffer / 100) * product.price) || 0
             })
 
-            //UPDATE INVENTORY 
-            // if(product.stock >= item.quantity){
-            //     return res.status(400).json({success:false,message:"Insufficent stock count"})
-            // }
-            product.stock -= item.quantity
+            //UPDATE INVENTORY
+            product.stock -= quantity
             await product.save()
         }
 
@@ -221,12 +214,12 @@ export const confirmOrder = async (req, res, next) => {
             totalAmount: parseInt(finalPrice),
             paymentStatus: paymentStatus,
             coupon: coupon?.coupon?._id,
-            isCouponAvailable : (coupon)?true:false
+            isCouponAvailable: (coupon) ? true : false
         })
 
         req.session.applyCoupon = null //CLEAR COUPON FROM SESSOIN APPLIED ONE
 
-        const saveOrder = await newOrder.save() 
+        const saveOrder = await newOrder.save()
         console.log(`New order saved ${saveOrder}`)
 
         if (!saveOrder) {
@@ -235,12 +228,19 @@ export const confirmOrder = async (req, res, next) => {
             })
         }
 
+        //MARK COUPON AS USED ONLY AFTER ORDER IS SAVED SUCCESSFULLY
+        if (coupon?.coupon?._id) {
+            await Coupon.findByIdAndUpdate(coupon.coupon._id, {
+                $addToSet: { isUsed: user.id }
+            })
+        }
+
         //REMOVE CART ITEMS
         await Cart.findByIdAndUpdate(cart._id, { $set: { items: [] } })
         req.session.order = saveOrder
         return res.status(200).json({
             success: true, message: "Order confirmed"
-        }) 
+        })
     } catch (error) {
         next(new AppError(`Checkout Confirm order : ${error}`, 500))
     }
@@ -259,15 +259,22 @@ export const successPage = async (req, res, next) => {
 
         const user = await User.findById(userId.id)
         const orders = await Order.findById(req.session.order._id);
-        console.log("Order detials : ", orders)
+        console.log("Order details : ", orders)
+
+        // Fetch delivery address for the confirmation page
+        let deliveryAddress = null;
+        if (orders && orders.addressId) {
+            deliveryAddress = await Address.findById(orders.addressId);
+        }
 
         req.session.order = null
         return res.render('user/orderConfirmed', {
             user,
-            orders
+            orders,
+            deliveryAddress
         })
     } catch (error) {
-        next(new AppError(`Order confimation falied : ${error}`, 500))
+        next(new AppError(`Order confirmation failed : ${error}`, 500))
     }
 }
 
@@ -305,16 +312,14 @@ export const applyCoupon = async (req, res, next) => {
 
         //FOR SEE APPLIED COUPON IN CHECKOUT PAGE
         req.session.applyCoupon = { coupon, totalAmount: totalAmountWithCoupon }
-        console.log("req.session.applyCoupon ", req.session.applyCoupon)
-
-        //MARK IT HAS BEEN USED
-        coupon.isUsed.push(req.user?.id)
-        await coupon.save()
 
         return res.status(200).json({
             success: true,
-            message: `Coupon applied coupon applied  You saved ₹${discountAmount.toFixed(2)}`,
-            totalAmountWithCoupon
+            message: `Coupon applied! You saved ₹${discountAmount.toFixed(2)}`,
+            totalAmountWithCoupon,
+            discountAmount,
+            couponId: coupon._id,
+            couponCode: coupon.couponCode
         })
     } catch (error) {
         next(new AppError(`Apply coupon failed ${error}`, 500))
@@ -324,24 +329,13 @@ export const applyCoupon = async (req, res, next) => {
 
 export const removeCoupon = async (req, res, next) => {
     try {
-        const { couponId } = req.body;
-        const user = req.user;
-        const coupon = await Coupon.findById(couponId);
-        if (!coupon) {
-            return res.status(404).json({ success: false, message: "Coupon not found" });
-        }
+        const applied = req.session.applyCoupon
+        // Restore the pre-coupon total symmetrically from what was subtracted at apply-time,
+        // instead of recomputing from the cart — keeps it exact and avoids re-fetching products.
+        const restoredTotal = applied ? applied.totalAmount + applied.coupon.discountValue : null
 
-        if (coupon.isUsed.includes(user.id.toString())) {
-            await Coupon.findByIdAndUpdate(couponId, {
-                $pull: { isUsed: user.id }
-            });
-
-            req.session.applyCoupon = null
-            return res.status(200).json({ success: true, message: "Coupon removed" });
-        }
-
-        return res.status(400).json({ success: false, message: "Coupon not removed, not found in used list" });
-
+        req.session.applyCoupon = null
+        return res.status(200).json({ success: true, message: "Coupon removed", finalPrice: restoredTotal });
     } catch (error) {
         next(new AppError(`Remove coupon failed: ${error.message}`, 500));
     }
