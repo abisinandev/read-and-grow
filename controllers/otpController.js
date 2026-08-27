@@ -3,7 +3,9 @@ import OTP from '../models/otpSchema.js';
 import User from '../models/userSchema.js';
 import jwt from "jsonwebtoken"
 import AppError from "../utils/errorHandler.js";
-import { content_v2_1 } from "googleapis";
+import { CONFIG } from "../utils/constants/envConfig.js";
+import { AUTH_ERRORS } from "../utils/constants/errorMessages.js";
+import { STATUS } from "../utils/constants/statusCodes.js";
 import { getReferralReward } from "../services/referralReward.js";
 
 export const sendOTP = async (email) => {
@@ -13,7 +15,7 @@ export const sendOTP = async (email) => {
         if (checkUserPresent) {
             return {
                 success: false,
-                message: "User already exists"
+                message: AUTH_ERRORS.USERNAME_TAKEN
             }
         }
 
@@ -52,7 +54,7 @@ export const sendOTP = async (email) => {
         console.log(error.message)
         return {
             success: false,
-            message: "failed to send OTP",
+            message: AUTH_ERRORS.OTP_SEND_FAILED,
             error: error.message
         }
     }
@@ -78,9 +80,9 @@ export const otpVerifyPost = async (req, res, next) => {
         console.log("otp : ", otp)
 
         if (!req.session.temp && !req.session.update) {
-            return res.status(400).json({ 
+            return res.status(STATUS.BAD_REQUEST).json({ 
                 success: false,
-                message: "Session expired" 
+                message: AUTH_ERRORS.SESSION_EXPIRED
             })
         } 
 
@@ -101,19 +103,18 @@ export const otpVerifyPost = async (req, res, next) => {
             //     })
             // } 
 
-            //EXPIRY TIME
-            const expire = Date.now() + 30 * 1000
-            if (getOtp[0].createdAt.getTime() > expire) {
-                return res.status(400).json({
+            //EXPIRY TIME (30 seconds)
+            if (Date.now() - getOtp[0].createdAt.getTime() > 30 * 1000) {
+                return res.status(STATUS.BAD_REQUEST).json({
                     success: false,
-                    message: "OTP is expired. Please create new"
+                    message: AUTH_ERRORS.OTP_EXPIRED
                 })
             }
 
             if (getOtp[0].otp.toString() !== otp.toString()) {
-                return res.status(400).json({
+                return res.status(STATUS.BAD_REQUEST).json({
                     success: false,
-                    message: "Otp is not valid"
+                    message: AUTH_ERRORS.INVALID_OTP
                 })
             }
 
@@ -142,27 +143,27 @@ export const otpVerifyPost = async (req, res, next) => {
         const getOtp = await OTP.find({ email: email }).sort({ createdAt: -1 }).limit(1)
         console.log("getOtp : ", getOtp)
 
-        if (!getOtp[0].otp.length) {
-            return res.status(400).json({
+        if (!getOtp || getOtp.length === 0) {
+            return res.status(STATUS.BAD_REQUEST).json({
                 success: false,
-                message: "Otp is not valid"
+                message: AUTH_ERRORS.INVALID_OTP
             })
         }
 
-        const expire = Date.now() + 30 * 1000
-        if (getOtp.createdAt > expire) {
-            return res.status(400).json({
+        //EXPIRY TIME (30 seconds)
+        if (Date.now() - getOtp[0].createdAt.getTime() > 30 * 1000) {
+            return res.status(STATUS.BAD_REQUEST).json({
                 success: false,
-                message: "OTP is expired. Please create new"
+                message: AUTH_ERRORS.OTP_EXPIRED
             })
         }
 
-        // if (getOtp[0].otp !== otp) {
-        //     return res.status(400).json({
-        //         success:false,
-        //         message:"Otp is not valid"
-        //     })
-        // }
+        if (getOtp[0].otp.toString() !== otp.toString()) {
+            return res.status(STATUS.BAD_REQUEST).json({
+                success:false,
+                message: AUTH_ERRORS.INVALID_OTP
+            })
+        }
 
         //CREATE NEW USER 
         const newUser = new User({
@@ -182,7 +183,7 @@ export const otpVerifyPost = async (req, res, next) => {
         req.session.temp = null;//CLEAR SESSION
 
         //CREATE JWT TOKEN
-        const token = jwt.sign({ id: newUser._id, username: newUser.username, role:newUser.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES })
+        const token = jwt.sign({ id: newUser._id, username: newUser.username, role:newUser.role }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES })
         //STORE JWT IN COOKIES
         res.cookie('jwt', token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 })
         return res.status(200).json({
@@ -193,7 +194,7 @@ export const otpVerifyPost = async (req, res, next) => {
   
     } catch (error) {
         console.log(error.message)
-        next(new AppError(`otp verfication failed : ${error}`, 500))
+        next(new AppError(`otp verfication failed : ${error}`, STATUS.INTERNAL_SERVER_ERROR))
     }
 }
  

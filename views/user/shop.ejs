@@ -13,7 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="/js/user/showMessage.js" defer></script>
-    <script src="/js/user/shop.js" defer></script>
+    <script src="/js/user/shop.js?v=2" defer></script>
     <style>
         /* Mobile menu styles */
         .mobile-menu {
@@ -143,7 +143,8 @@
       data-search="<%= search || '' %>" 
       data-category="<%= category || '' %>" 
       data-author="<%= author || '' %>" 
-      data-price="<%= price || '' %>">
+      data-price="<%= price || '' %>"
+      data-sort="<%= typeof currentSort !== 'undefined' ? currentSort : '' %>">
       
     <!-- Mobile menu overlay -->
     <div id="mobileMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
@@ -186,6 +187,9 @@
                             <% } %>
                             <% if (price) { %>
                                 <input type="hidden" name="price" value="<%= price %>">
+                            <% } %>
+                            <% if (typeof currentSort !== 'undefined' && currentSort && currentSort !== 'default') { %>
+                                <input type="hidden" name="sort" value="<%= currentSort %>">
                             <% } %>
                         </form>
                     </div>
@@ -233,6 +237,9 @@
                     <% if (price) { %>
                         <input type="hidden" name="price" value="<%= price %>">
                     <% } %>
+                    <% if (typeof currentSort !== 'undefined' && currentSort && currentSort !== 'default') { %>
+                        <input type="hidden" name="sort" value="<%= currentSort %>">
+                    <% } %>
                 </form>
             </div>
         </div>
@@ -240,23 +247,25 @@
 
     <main class="container mx-auto px-4 py-4 md:py-8 flex-1">
         <!-- Mobile breadcrumb and sort row -->
-        <div class="flex justify-between items-center mb-4 md:hidden">
-            <div class="text-sm breadcrumbs">
-                <span>Home</span> / 
-                <span>Shop</span>
-                <% if (category) { %> / <span><%= category %></span><% } %>
+        <div class="flex flex-col gap-3 mb-4 md:hidden">
+            <div class="flex justify-between items-center">
+                <div class="text-sm breadcrumbs">
+                    <span>Home</span> /
+                    <span>Shop</span>
+                    <% if (category) { %> / <span><%= category %></span><% } %>
+                </div>
             </div>
-            
-            <div class="hidden md:flex justify-end mb-4">
+
+            <div class="flex justify-end">
                 <div class="sort-by relative">
-                    <label for="sortOptions" class="text-lg font-semibold mr-2">Sort by:</label>
-                    <select id="sortOptions" name="sortOptions" onchange="location = '<%= currentSort %>' " class="border border-gray-300 rounded px-3 py-1 text-gray-700">
-                        <option value="/sort/default" <%= currentSort === 'default' ? 'selected' : '' %>>Default</option>
-                        <option value="/sort/name_asc" <%= currentSort === 'name_asc' ? 'selected' : '' %>>A to Z</option>
-                        <option value="/sort/name_desc" <%= currentSort === 'name_desc' ? 'selected' : '' %>>Z to A</option>
-                        <option value="/sort/price_asc" <%= currentSort === 'price_asc' ? 'selected' : '' %>>Price: Low to High</option>
-                        <option value="/sort/price_desc" <%= currentSort === 'price_desc' ? 'selected' : '' %>>Price: High to Low</option>
-                    </select>                    
+                    <label for="sortOptionsMobile" class="text-lg font-semibold mr-2">Sort by:</label>
+                    <select id="sortOptionsMobile" name="sortOptions" class="border border-gray-300 rounded px-3 py-1 text-gray-700">
+                        <option value="default" <%= typeof currentSort !== 'undefined' && currentSort === 'default' ? 'selected' : '' %>>Default</option>
+                        <option value="name_asc" <%= typeof currentSort !== 'undefined' && currentSort === 'name_asc' ? 'selected' : '' %>>A to Z</option>
+                        <option value="name_desc" <%= typeof currentSort !== 'undefined' && currentSort === 'name_desc' ? 'selected' : '' %>>Z to A</option>
+                        <option value="price_asc" <%= typeof currentSort !== 'undefined' && currentSort === 'price_asc' ? 'selected' : '' %>>Price: Low to High</option>
+                        <option value="price_desc" <%= typeof currentSort !== 'undefined' && currentSort === 'price_desc' ? 'selected' : '' %>>Price: High to Low</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -277,15 +286,15 @@
                         <h2 class="text-lg font-semibold mb-3">Categories</h2>
                         <ul class="space-y-2">
                             <li>
-                                <a href="/shop?page=1&limit=6<%= search ? '&search=' + encodeURIComponent(search) : '' %><%= author ? '&author=' + encodeURIComponent(author) : '' %><%= price ? '&price=' + encodeURIComponent(price) : '' %>" 
-                                    class="text-gray-600 hover:text-gray-900 <%= !category ? 'font-bold' : '' %>">
+                                <a href="#" data-filter="category" data-value="all"
+                                    class="filter-link text-gray-600 hover:text-gray-900 <%= !category ? 'font-bold bg-gray-100' : '' %>">
                                      All Categories
                                  </a>
                             </li>
                             <% categories.forEach(cat => { %>
                                 <li>
-                                    <a href="/shop?page=1&limit=6&category=<%= encodeURIComponent(cat.categoryName) %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= author ? '&author=' + encodeURIComponent(author) : '' %><%= price ? '&price=' + encodeURIComponent(price) : '' %>" 
-                                       class="text-gray-600 hover:text-gray-900 <%= category === cat.categoryName ? 'font-bold' : '' %>">
+                                    <a href="#" data-filter="category" data-value="<%= cat.categoryName %>"
+                                       class="filter-link text-gray-600 hover:text-gray-900 <%= category.trim().toLowerCase() === cat.categoryName.trim().toLowerCase() ? 'font-bold bg-gray-100' : '' %>">
                                         <%= cat.categoryName %>
                                     </a>
                                 </li>
@@ -298,11 +307,10 @@
                         <h2 class="text-lg font-semibold mb-3">Authors</h2>
                         <div class="max-h-60 overflow-y-auto">
                             <ul class="space-y-2">
-                                <% let authorSet = new Set(allProducts.map(product => product.authorName)); %>
-                                <% Array.from(authorSet).forEach(auth => { %>
+                                <% authors.forEach(auth => { %>
                                     <li>
-                                        <a href="/shop?page=1&limit=6<%= category ? '&category=' + encodeURIComponent(category) : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %>&author=<%= encodeURIComponent(auth) %><%= price ? '&price=' + encodeURIComponent(price) : '' %>" 
-                                           class="text-gray-600 hover:text-gray-900 <%= author === auth ? 'font-bold' : '' %>">
+                                        <a href="#" data-filter="author" data-value="<%= auth %>"
+                                           class="filter-link text-gray-600 hover:text-gray-900 <%= author === auth ? 'font-bold bg-gray-100' : '' %>">
                                             <%= auth %>
                                         </a>
                                     </li>
@@ -316,20 +324,26 @@
                         <h2 class="text-lg font-semibold mb-3">Price</h2>
                         <ul class="space-y-2">
                             <li>
-                                <a href="/shop?page=1&limit=6<%= category ? '&category=' + encodeURIComponent(category) : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= author ? '&author=' + encodeURIComponent(author) : '' %>&price=under-449" 
-                                   class="text-gray-600 hover:text-gray-900 <%= price === 'under-20' ? 'font-bold' : '' %>">
+                                <a href="#" data-filter="price" data-value="all"
+                                   class="filter-link text-gray-600 hover:text-gray-900 <%= !price ? 'font-bold bg-gray-100' : '' %>">
+                                    All Prices
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" data-filter="price" data-value="under-449"
+                                   class="filter-link text-gray-600 hover:text-gray-900 <%= price === 'under-449' ? 'font-bold bg-gray-100' : '' %>">
                                     Under Rs.449
                                 </a>
                             </li>
                             <li>
-                                <a href="/shop?page=1&limit=6<%= category ? '&category=' + encodeURIComponent(category) : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= author ? '&author=' + encodeURIComponent(author) : '' %>&price=400-599" 
-                                   class="text-gray-600 hover:text-gray-900 <%= price === '20-30' ? 'font-bold' : '' %>">
+                                <a href="#" data-filter="price" data-value="400-599"
+                                   class="filter-link text-gray-600 hover:text-gray-900 <%= price === '400-599' ? 'font-bold bg-gray-100' : '' %>">
                                     Rs.400 - Rs.599
                                 </a>
                             </li>
                             <li>
-                                <a href="/shop?page=1&limit=6<%= category ? '&category=' + encodeURIComponent(category) : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= author ? '&author=' + encodeURIComponent(author) : '' %>&price=above-600" 
-                                   class="text-gray-600 hover:text-gray-900 <%= price === 'above-30' ? 'font-bold' : '' %>">
+                                <a href="#" data-filter="price" data-value="above-600"
+                                   class="filter-link text-gray-600 hover:text-gray-900 <%= price === 'above-600' ? 'font-bold bg-gray-100' : '' %>">
                                     Above Rs.600
                                 </a>
                             </li>
@@ -350,24 +364,24 @@
                 <!-- Desktop sort options -->
                 <div class="hidden md:flex justify-end mb-4">
                     <div class="sort-by relative">
-                        <label for="sortOptions" class="text-lg font-semibold mr-2">Sort by:</label>
-                        <select id="sortOptions" name="sortOptions" onchange="location = this.value;" class="border border-gray-300 rounded px-3 py-1 text-gray-700">
-                            <option value="/shop"><%= (currentSort)? currentSort : 'Default' %></option>
-                            <option value="/sort/name_asc">A to Z</option>
-                            <option value="/sort/name_desc">Z to A</option>
-                            <option value="/sort/price_asc">Price: Low to High</option>
-                            <option value="/sort/price_desc">Price: High to Low</option>
+                        <label for="sortOptionsDesktop" class="text-lg font-semibold mr-2">Sort by:</label>
+                        <select id="sortOptionsDesktop" name="sortOptions" class="border border-gray-300 rounded px-3 py-1 text-gray-700">
+                            <option value="default" <%= typeof currentSort !== 'undefined' && currentSort === 'default' ? 'selected' : '' %>>Default</option>
+                            <option value="name_asc" <%= typeof currentSort !== 'undefined' && currentSort === 'name_asc' ? 'selected' : '' %>>A to Z</option>
+                            <option value="name_desc" <%= typeof currentSort !== 'undefined' && currentSort === 'name_desc' ? 'selected' : '' %>>Z to A</option>
+                            <option value="price_asc" <%= typeof currentSort !== 'undefined' && currentSort === 'price_asc' ? 'selected' : '' %>>Price: Low to High</option>
+                            <option value="price_desc" <%= typeof currentSort !== 'undefined' && currentSort === 'price_desc' ? 'selected' : '' %>>Price: High to Low</option>
                         </select>
                     </div>
                 </div>
                 
                 
-                <% if(errorMessage){ %>
-                    <div class="text-lg text-red-600 font-semibold text-center mt-2">
-                        <%= errorMessage %>
-                    </div>                    
-                <% } else { %>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                        <% if(errorMessage){ %>
+                            <div class="text-lg text-red-600 font-semibold text-center mt-2 col-span-full">
+                                <%= errorMessage %>
+                            </div>
+                        <% } else { %>
                         <!-- Book items -->
                         <% allProducts.forEach(product => { %>
                             <article class="bg-white rounded-lg shadow-md hover:shadow-xl overflow-hidden transition-transform hover:scale-105">
@@ -423,13 +437,24 @@
                                 </div>
                             </article>
                         <% }) %>
+                        <% } %>
                     </div>
-                <% } %>
 
                 <!-- Pagination -->
+                <%
+                    // Build the shared query string once so every pagination link carries
+                    // ALL active filters (category, search, price, author, sort) — previously
+                    // author/sort were dropped here, silently resetting those filters.
+                    let pageQuery = '&limit=' + limit;
+                    if (category) pageQuery += '&category=' + encodeURIComponent(category);
+                    if (author) pageQuery += '&author=' + encodeURIComponent(author);
+                    if (search) pageQuery += '&search=' + encodeURIComponent(search);
+                    if (price) pageQuery += '&price=' + encodeURIComponent(price);
+                    if (typeof currentSort !== 'undefined' && currentSort && currentSort !== 'default') pageQuery += '&sort=' + encodeURIComponent(currentSort);
+                %>
                 <div class="flex justify-center mt-6 md:mt-8 space-x-1 sm:space-x-2">
                     <% if(page > 1) { %>
-                        <a href="/shop?page=<%= page-1 %>&limit=<%= limit %><%= category ? '&category=' + encodeURIComponent(category) : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= price ? '&price=' + encodeURIComponent(price) : '' %>"
+                        <a href="/shop?page=<%= page-1 %><%= pageQuery %>"
                            class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100">
                             <i class="fas fa-chevron-left"></i>
                         </a>
@@ -438,12 +463,12 @@
                             <i class="fas fa-chevron-left"></i>
                         </a>
                     <% } %>
-                    
-                    <% 
+
+                    <%
                     // For better mobile pagination, show limited pages
                     let startPage = Math.max(1, page - 1);
                     let endPage = Math.min(totalPages, page + 1);
-                    
+
                     // Ensure at least 3 page buttons when possible
                     if (endPage - startPage < 2 && totalPages > 2) {
                         if (startPage === 1) {
@@ -452,17 +477,17 @@
                             startPage = Math.max(1, endPage - 2);
                         }
                     }
-                    
-                    for(let i=startPage; i<=endPage; i++) { 
+
+                    for(let i=startPage; i<=endPage; i++) {
                     %>
-                        <a href="/shop?page=<%= i %>&limit=<%= limit %><%= category ? '&category=' + encodeURIComponent(category) : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= price ? '&price=' + encodeURIComponent(price) : '' %>"
+                        <a href="/shop?page=<%= i %><%= pageQuery %>"
                            class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded <%= i === page ? 'bg-black text-white' : 'border border-gray-300 hover:bg-gray-100' %>">
                             <%= i %>
                         </a>
                     <% } %>
-                    
+
                     <% if(page < totalPages) { %>
-                        <a href="/shop?page=<%= page+1 %>&limit=<%= limit %><%= category ? '&category=' + encodeURIComponent(category) : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= price ? '&price=' + encodeURIComponent(price) : '' %>"
+                        <a href="/shop?page=<%= page+1 %><%= pageQuery %>"
                            class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-100">
                             <i class="fas fa-chevron-right"></i>
                         </a>

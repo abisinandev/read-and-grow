@@ -4,63 +4,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login</title>
-
-    <!-- jQuery Validation Plugin -->
+    <title>Admin Login - REad &amp; GroW</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
-
+    <script src="/js/admin/adminLogin.js" defer></script>
 </head>
-<script src="https://cdn.tailwindcss.com"></script>
 
-<script  src="/js/admin/adminLogin.js" defer></script>
- 
-
-<body id="" class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-[30px] shadow-lg w-96">
-        <h2 class="text-2xl font-semibold text-center mb-6">Admin Login</h2>
-
-        <form id="form" class="space-y-4" action="/admin/login" method="post">
-            <div>
-                <div id="errorMessage"></div>
-                <input type="text"  placeholder="Username or email" value="Admin"
-                    id="username"
-                    class="w-full px-4 py-2 rounded-[15px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
-            </div>
-            <div class="relative">
-                <input type="password" placeholder="Password" id="password" required value="admin123"
-                    class="w-full px-4 py-2 rounded-[15px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 pr-10">
-                <span class="password-toggle-icon absolute inset-y-0 right-3 flex items-center cursor-pointer">
-                    <i class="fas fa-eye"></i>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-sm">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-slate-900 px-8 py-8 text-center">
+                <span class="inline-flex w-12 h-12 rounded-xl bg-white/10 items-center justify-center mb-3">
+                    <i class="fas fa-book-open text-white text-lg"></i>
+                </span>
+                <h1 class="text-white text-lg font-semibold tracking-tight">REad &amp; GroW</h1>
+                <span class="inline-flex items-center gap-1.5 text-slate-400 text-xs mt-1.5">
+                    <i class="fas fa-lock text-[10px]"></i> Admin Panel &middot; Staff Access Only
                 </span>
             </div>
 
-            <div class="flex justify-between text-[12px] text-gray-600">
-                <p>
-                    If you are a Admin you can login here
-                    <a href="#" class="text-red-600 hover:underline"> </a>
+            <form id="form" class="p-8 space-y-4" action="/admin/login" method="post">
+                <h2 class="text-lg font-semibold text-gray-800 mb-1">Sign in</h2>
+                <p class="text-sm text-gray-500 mb-4">Enter your admin credentials to continue.</p>
+
+                <div>
+                    <label for="username" class="block text-xs font-medium text-gray-600 mb-1">Username or email</label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm"></i>
+                        <input type="text" placeholder="Username or email" id="username" name="username" required
+                            autocomplete="username"
+                            class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-xs font-medium text-gray-600 mb-1">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-key absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm"></i>
+                        <input type="password" placeholder="Password" id="password" name="password" required
+                            autocomplete="current-password"
+                            class="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent">
+                        <button type="button" id="togglePassword" tabindex="-1"
+                            class="password-toggle-icon absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                            aria-label="Show password">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="loginButton"
+                    class="w-full bg-slate-900 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-slate-800 transition duration-200 mt-2 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <i id="loginButtonSpinner" class="fas fa-circle-notch fa-spin hidden"></i>
+                    <span id="loginButtonText">Login</span>
+                </button>
+
+                <p class="text-center text-[11px] text-gray-400 pt-1 flex items-center justify-center gap-1.5">
+                    <i class="fas fa-shield-halved"></i>
+                    This portal is restricted to authorized administrators. Login attempts are logged.
                 </p>
-            </div>
+            </form>
+        </div>
 
-            <button type="submit"  id="loginButton"
-                class="w-full bg-red-600 text-white py-2 rounded-[20px] hover:bg-black transition duration-300">
-                Login
-            </button>
-
-        </form>
-
-        <!-- <div class="flex justify-center mt-4">
-            <img src="https://img.icons8.com/?size=100&id=17949&format=png&color=000000" alt="Google Logo" class="h-6">
-        </div> -->
+        <div class="text-center mt-5">
+            <a href="/" class="text-xs text-slate-500 hover:text-slate-700 inline-flex items-center gap-1.5">
+                <i class="fas fa-arrow-left text-[10px]"></i> Back to REad &amp; GroW
+            </a>
+        </div>
     </div>
 
-
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script>
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const passwordInput = document.getElementById('password');
+            const icon = this.querySelector('i');
+            const isHidden = passwordInput.type === 'password';
+            passwordInput.type = isHidden ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !isHidden);
+            icon.classList.toggle('fa-eye-slash', isHidden);
+            this.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        });
+    </script>
 </body>
-
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
-
-
 
 </html>

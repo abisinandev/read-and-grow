@@ -82,7 +82,7 @@
                     <span class="text-gray-500 ml-2 text-sm"><%= product.rating || 0 %> ratings</span>
                 </div>
                 <p class="text-xl font-bold text-gray-900">
-                    Price: Rs. <%= product.price %>
+                    Price: <%= product.price %>
                     
                     <% if (user && product.bestOffer) { %>
                         <span class="text-sm text-red-500"><%= product?.bestOffer %>% offer</span>

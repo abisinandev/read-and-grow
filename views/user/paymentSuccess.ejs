@@ -3,9 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Order Confirmed - REad & GroW</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes scaleIn {
+            0%   { transform: scale(0); opacity: 0; }
+            60%  { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes checkDraw {
+            0%   { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+        }
+        @keyframes fadeUp {
+            0%   { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .circle-anim  { animation: scaleIn 0.5s ease forwards; }
+        .check-anim   {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: checkDraw 0.5s ease 0.45s forwards;
+        }
+        .fade-up-1 { opacity: 0; animation: fadeUp 0.5s ease 0.7s forwards; }
+        .fade-up-2 { opacity: 0; animation: fadeUp 0.5s ease 0.85s forwards; }
+        .fade-up-3 { opacity: 0; animation: fadeUp 0.5s ease 1.0s forwards; }
+        .fade-up-4 { opacity: 0; animation: fadeUp 0.5s ease 1.15s forwards; }
+        .fade-up-5 { opacity: 0; animation: fadeUp 0.5s ease 1.3s forwards; }
+    </style>
 </head>
-<body>
-     <h1>Success payment</h1>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <%- include("../partials/user/navBar.ejs") %>
+
+    <main class="flex-1 flex items-center justify-center px-4 py-12">
+        <div class="bg-white rounded-2xl shadow-lg w-full max-w-lg p-8 text-center">
+
+            <!-- Animated checkmark -->
+            <div class="flex justify-center mb-6 circle-anim">
+                <div class="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg class="w-14 h-14" viewBox="0 0 52 52" fill="none">
+                        <circle cx="26" cy="26" r="25" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+                        <polyline class="check-anim" points="14,27 22,35 38,18"
+                            stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                </div>
+            </div>
+
+            <h1 class="fade-up-1 text-2xl font-bold text-gray-900 mb-2">Order Confirmed! 🎉</h1>
+            <p class="fade-up-2 text-gray-500 text-sm mb-6">
+                Thank you for your purchase. Your order has been placed successfully
+                and will be processed shortly.
+            </p>
+
+            <% if (typeof order !== 'undefined' && order) { %>
+            <!-- Order info card -->
+            <div class="fade-up-3 bg-gray-50 rounded-xl p-5 mb-6 text-left space-y-3">
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500 font-medium">Order Number</span>
+                    <span class="text-gray-900 font-semibold">#<%= order.orderId %></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500 font-medium">Payment Method</span>
+                    <span class="text-gray-900 font-semibold"><%= order.payment %></span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500 font-medium">Total Amount</span>
+                    <span class="text-gray-900 font-bold">Rs. <%= order.totalAmount?.toFixed(2) %></span>
+                </div>
+                <% if (deliveryAddress) { %>
+                <div class="pt-2 border-t border-gray-200 text-sm">
+                    <p class="text-gray-500 font-medium mb-1">Delivering to</p>
+                    <p class="text-gray-900 font-semibold"><%= deliveryAddress.firstName %> <%= deliveryAddress.lastName %></p>
+                    <p class="text-gray-600 text-xs"><%= deliveryAddress.street %>, <%= deliveryAddress.city %>, <%= deliveryAddress.state %> — <%= deliveryAddress.pincode %></p>
+                </div>
+                <% } %>
+            </div>
+            <% } %>
+
+            <!-- Action buttons -->
+            <div class="fade-up-4 flex flex-col sm:flex-row gap-3">
+                <a href="/orders"
+                    class="flex-1 bg-black text-white py-3 px-6 rounded-xl font-medium text-sm hover:bg-gray-800 transition">
+                    View My Orders
+                </a>
+                <a href="/shop"
+                    class="flex-1 bg-gray-100 text-gray-800 py-3 px-6 rounded-xl font-medium text-sm hover:bg-gray-200 transition">
+                    Continue Shopping
+                </a>
+            </div>
+
+            <p class="fade-up-5 text-xs text-gray-400 mt-5">
+                A confirmation email will be sent once your order is dispatched.
+            </p>
+        </div>
+    </main>
 </body>
 </html>

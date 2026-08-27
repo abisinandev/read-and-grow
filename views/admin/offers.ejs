@@ -1,193 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offers - Read & Grow</title>
+    <title>Offer Management - Read & Grow</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <style>
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 flex">
-     <!-- Sidebar -->
-    <%- include("../partials/admin/adminSideBar.ejs") %>
-    <!-- Main Content -->
-    <div class="w-full md:w-[84%] p-8">
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h1 class="text-2xl font-bold mb-6">Offers</h1>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full border-collapse">
-                    <thead>
-                        <tr class="bg-gray-100 border-b">
-                            <th class="p-3 text-left">NO.</th>
-                            <th class="p-3 text-left">Offer Name</th>
-                            <th class="p-3 text-left">Offer Type</th>
-                            <th class="p-3 text-left">Percentage</th>
-                            <th class="p-3 text-left">Status</th>
-                            <th class="p-3 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if(offers && offers.length>0){ %>
-                            <% for(let i=0;i<offers.length; i++){ %>
-                            <tr class="border-b hover:bg-gray-50">
-                              <td class="px-6 py-4 whitespace-nowrap"><%= (page - 1) * limit + i + 1 %></td>
-                                <td class="p-3"><%= offers[i].offerName %></td>
-                                <td class="p-3"><%= offers[i].offerType %></td>
-                                <td class="p-3"><%= offers[i].discountPercentage %>%</td>
-                                <td class="p-3"><%= (offers[i].status)? "Active" : "Inactive" %></td>
-                                <td class="p-3 flex justify-center space-x-2">
-                                    <a href="/admin/edit-offer/<%= offers[i]._id %>"  class="text-blue-500 hover:text-blue-700">
-                                        <i data-feather="edit-2" class="w-5 h-5"></i>
-                                </a>
-                                    <button onclick="deleteOffer('<%= offers[i]._id %>')" class="text-red-500 hover:text-red-700">
-                                        <i data-feather="trash-2" class="w-5 h-5"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        <% } %>
-                        <% }else{ %>
-                            <tr class="border-b hover:bg-gray-50">
-                                <td colspan="5" class="align-center text-center">No offer found</td>
-                            </tr>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
 
-            <div class="mt-6 flex justify-end">
-                <a href="/admin/add-offers" class="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 transition">
-                    ADD
-                </a>
+<body class="bg-gray-50 font-sans min-h-screen flex flex-col md:flex-row">
+    <!-- Sidebar -->
+    <%- include("../partials/admin/adminSideBar.ejs") %>
+
+        <!-- Main Content -->
+        <div class="p-4 pt-20 md:pt-6 sm:p-6 md:pt-6 flex-1 min-w-0">
+            <header class="bg-white shadow-sm rounded-xl mb-6">
+                <div class="flex justify-between items-center px-6 py-4">
+                    <h1 class="text-2xl font-semibold text-gray-800">Offer Management</h1>
+                </div>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex flex-col sm:flex-row flex-wrap justify-between items-center mb-6 gap-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Offers</h2>
+                    <div class="flex flex-col sm:flex-row flex-wrap items-center gap-4 w-full sm:w-auto">
+                        <form id="searchForm"
+                            class="flex flex-col sm:flex-row flex-wrap items-center gap-4 w-full sm:w-auto">
+                            <div class="relative w-full sm:w-72">
+                                <input type="text" name="searchInput"
+                                    value="<%= typeof query !== 'undefined' ? query : '' %>"
+                                    placeholder="Search by offer name"
+                                    class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <i
+                                    class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                            <button type="submit"
+                                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-150 w-full sm:w-auto">Search</button>
+                        </form>
+                        <button
+                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-150 w-full sm:w-auto"
+                            onclick="window.location.href='/admin/offers'">Reset</button>
+                        <a href="/admin/add-offers"
+                            class="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition duration-150 w-full sm:w-auto text-center">
+                            <i class="fas fa-plus mr-2"></i>Add Offer
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Offers Table -->
+                <div class="table-container">
+                    <table class="w-full min-w-[860px]">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold tracking-wider">
+                                <th class="px-4 py-3 text-left">No.</th>
+                                <th class="px-4 py-3 text-left">Offer Name</th>
+                                <th class="px-4 py-3 text-left">Type</th>
+                                <th class="px-4 py-3 text-left">Applies To</th>
+                                <th class="px-4 py-3 text-left">Discount</th>
+                                <th class="px-4 py-3 text-left">Valid Period</th>
+                                <th class="px-4 py-3 text-left">Status</th>
+                                <th class="px-4 py-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <% if (offers && offers.length> 0) { %>
+                                <% offers.forEach((offer, i)=> { %>
+                                    <% const isExpired=offer.validTo && new Date(offer.validTo) < new Date(); %>
+                                        <tr class="hover:bg-gray-50 transition-colors">
+                                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <%= (page - 1) * limit + i + 1 %>
+                                            </td>
+                                            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                <%= offer.offerName %>
+                                            </td>
+                                            <td class="px-4 py-4 whitespace-nowrap">
+                                                <span
+                                                    class="text-xs font-semibold px-2.5 py-1 rounded-full <%= offer.offerType === 'Product' ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-800' %>">
+                                                    <%= offer.offerType %>
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                                                <% if (offer.offerType==='Product' ) { %>
+                                                    <%= offer.productId?.name || 'Product no longer available' %>
+                                                        <% } else { %>
+                                                            <%= offer.categoryId?.categoryName
+                                                                || 'Category no longer available' %>
+                                                                <% } %>
+                                            </td>
+                                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <%= offer.discountPercentage %>%
+                                            </td>
+                                            <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-500">
+                                                <%= new Date(offer.validFrom).toLocaleDateString('en-US', {
+                                                    year: 'numeric' , month: 'short' , day: 'numeric' }) %>
+                                                    &ndash;
+                                                    <%= new Date(offer.validTo).toLocaleDateString('en-US', {
+                                                        year: 'numeric' , month: 'short' , day: 'numeric' }) %>
+                                            </td>
+                                            <td class="px-4 py-4 whitespace-nowrap">
+                                                <% if (!offer.status) { %>
+                                                    <span
+                                                        class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">Inactive</span>
+                                                    <% } else if (isExpired) { %>
+                                                        <span
+                                                            class="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-800">Expired</span>
+                                                        <% } else { %>
+                                                            <span
+                                                                class="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-800">Active</span>
+                                                            <% } %>
+                                            </td>
+                                            <td class="px-4 py-4 whitespace-nowrap">
+                                                <div class="flex justify-center items-center gap-3">
+                                                    <a href="/admin/edit-offer/<%= offer._id %>"
+                                                        class="text-blue-500 hover:text-blue-700" title="Edit">
+                                                        <i class="fas fa-pen-to-square"></i>
+                                                    </a>
+                                                    <button onclick="deleteOffer('<%= offer._id %>')"
+                                                        class="text-red-500 hover:text-red-700" title="Delete">
+                                                        <i class="fas fa-trash-can"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="8" class="px-6 py-8 text-sm text-gray-500 text-center">
+                                                        No offers found</td>
+                                                </tr>
+                                                <% } %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex justify-center mt-6">
+                    <% /* Preserve an active search across pagination clicks. */ const pageQuery = (typeof query !== 'undefined' && query) ? '&query=' + encodeURIComponent(query) : ''; %>
+                        <nav class="flex justify-center mt-6">
+                            <ul class="inline-flex items-center -space-x-px text-sm">
+                                <!-- Previous Page -->
+                                <% if(page> 1){ %>
+                                    <li>
+                                        <a href="/admin/offers?page=<%= page - 1 %>&limit=<%= limit %><%= pageQuery %>"
+                                            class="flex items-center justify-center px-3 h-10 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 19l-7-7 7-7"></path>
+                                            </svg>
+                                        </a>
+                                    </li>
+                                    <% } else { %>
+                                        <li>
+                                            <span
+                                                class="flex items-center justify-center px-3 h-10 ml-0 leading-tight text-gray-300 bg-gray-100 border border-gray-200 rounded-l-lg cursor-not-allowed">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                                </svg>
+                                            </span>
+                                        </li>
+                                        <% } %>
+
+                                            <!-- Page Numbers -->
+                                            <% for(let i=1; i <=totalPages; i++) { %>
+                                                <li>
+                                                    <a href="/admin/offers?page=<%= i %>&limit=<%= limit %><%= pageQuery %>"
+                                                        class="flex items-center justify-center px-3 h-10 leading-tight
+                                    border border-gray-300
+                                    <%= page === i ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-100' %>">
+                                                        <%= i %>
+                                                    </a>
+                                                </li>
+                                                <% } %>
+
+                                                    <!-- Next Page -->
+                                                    <% if(page < totalPages){ %>
+                                                        <li>
+                                                            <a href="/admin/offers?page=<%= page + 1 %>&limit=<%= limit %><%= pageQuery %>"
+                                                                class="flex items-center justify-center px-3 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                                </svg>
+                                                            </a>
+                                                        </li>
+                                                        <% } else { %>
+                                                            <li>
+                                                                <span
+                                                                    class="flex items-center justify-center px-3 h-10 leading-tight text-gray-300 bg-gray-100 border border-gray-200 rounded-r-lg cursor-not-allowed">
+                                                                    <svg class="w-4 h-4" fill="none"
+                                                                        stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round"
+                                                                            stroke-linejoin="round" stroke-width="2"
+                                                                            d="M9 5l7 7-7 7"></path>
+                                                                    </svg>
+                                                                </span>
+                                                            </li>
+                                                            <% } %>
+                            </ul>
+                        </nav>
+                </div>
             </div>
         </div>
-    <!-- pagination -->
-    <div class="flex justify-center mt-6">
-        <nav class="flex justify-center mt-6">
-            <ul class="inline-flex items-center -space-x-px text-sm">
-              <!-- Previous Page -->
-              <% if(page > 1){ %>
-                <li>
-                  <a href="/admin/offers?page=<%= page - 1 %>&limit=<%= limit %>" 
-                     class="flex items-center justify-center px-3 h-10 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                  </a>
-                </li>
-              <% } else { %>
-                <li>
-                  <span class="flex items-center justify-center px-3 h-10 ml-0 leading-tight text-gray-300 bg-gray-100 border border-gray-200 rounded-l-lg cursor-not-allowed">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                  </span>
-                </li>
-              <% } %>
-          
-              <!-- Page Numbers -->
-              <% for(let i = 1; i <= totalPages; i++) { %>
-                <li>
-                  <a href="/admin/offers?page=<%= i %>&limit=<%= limit %>" 
-                     class="flex items-center justify-center px-3 h-10 leading-tight 
-                            border border-gray-300 
-                            <%= page === i ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-100' %>">
-                    <%= i %>
-                  </a>
-                </li>
-              <% } %>
-          
-              <!-- Next Page -->
-              <% if(page < totalPages){ %>
-                <li>
-                  <a href="/admin/offers?page=<%= page + 1 %>&limit=<%= limit %>" 
-                     class="flex items-center justify-center px-3 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                  </a>
-                </li>
-              <% } else { %>
-                <li>
-                  <span class="flex items-center justify-center px-3 h-10 leading-tight text-gray-300 bg-gray-100 border border-gray-200 rounded-r-lg cursor-not-allowed">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                  </span>
-                </li>
-              <% } %>
-            </ul>
-          </nav>
-          
-    </div>
-</div>
-    <script>
-        // Initialize Feather Icons
-        feather.replace();
-        
-        function showToast(message, type = 'error') {
-            Toastify({
-                text: message,
-                duration: 2000,
-                gravity: "top",
-                position: "center",
-                backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
-                stopOnFocus: true,
-            }).showToast();
-        }
 
-        async function deleteOffer(offerId){
-            console.log(offerId)
-                Swal.fire({
+        <script>
+            function showToast(message, type = 'error') {
+                Toastify({
+                    text: message,
+                    duration: 2000,
+                    gravity: "top",
+                    position: "center",
+                    backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
+                    stopOnFocus: true,
+                }).showToast();
+            }
+
+            async function deleteOffer(offerId) {
+                const confirm = await Swal.fire({
                     title: "Are you sure?",
-                    text: "Do you really want to remove this item from your list?",
+                    text: "Do you really want to remove this offer from the list?",
                     icon: "warning",
                     showCancelButton: true,
                     confirmButtonColor: "#d33",
                     cancelButtonColor: "#3085d6",
                     confirmButtonText: "Yes, remove it!"
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        try {
-                            const response = await fetch(`/admin/offer/${offerId}`, {
-                                method: "DELETE",
-                                headers: { "Content-Type": "application/json" },
-                               
-                            })
-
-                            const result = await response.json()
-
-                            console.log(result)
-                            if (!response.ok) {
-                                throw Error(result.message || 'Not deleted')
-                                return
-                            }
-
-                            Swal.fire({
-                                title: "Removed!",
-                                text: result.message || "Offer is removed from list.",
-                                icon: "success",
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-
-                        } catch (error) {
-                            Swal.fire({
-                                title: "Error!",
-                                text: error.message || "Something went wrong.",
-                                icon: "error"
-                            });
-                        }
-                    }
                 });
-        }
-  
- 
 
- 
-    </script>
-</body> 
+                if (!confirm.isConfirmed) return;
+
+                try {
+                    const response = await fetch(`/admin/offer/${offerId}`, {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || 'Offer could not be removed');
+                    }
+
+                    Swal.fire({
+                        title: "Removed!",
+                        text: result.message || "Offer is removed from list.",
+                        icon: "success",
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => window.location.reload());
+
+                } catch (error) {
+                    Swal.fire({
+                        title: "Error!",
+                        text: error.message || "Something went wrong.",
+                        icon: "error"
+                    });
+                }
+            }
+
+            document.getElementById('searchForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const value = this.querySelector('input[name="searchInput"]').value.trim();
+                window.location.href = `/admin/offers?page=1&limit=<%= limit %>${value ? '&query=' + encodeURIComponent(value) : ''}`;
+            });
+        </script>
+</body>
+
 </html>

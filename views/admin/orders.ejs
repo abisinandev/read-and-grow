@@ -5,80 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Management - Read & Grow</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <style>
+        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans h-screen flex flex-col md:flex-row overflow-hidden">
+<body class="bg-gray-50 font-sans min-h-screen flex flex-col md:flex-row">
     <!-- Sidebar -->
     <%- include("../partials/admin/adminSideBar.ejs") %>
 
     <!-- Main Content -->
-    <div class="md:ml-[0%] p-4 flex-1 flex flex-col overflow-hidden">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-2">
-            <h1 class="text-2xl font-bold text-gray-800">Order Management</h1>
-        </div>
-
-        <!-- Subheader with Search and Button -->
-        <div class="flex justify-between items-center mb-2">
-            <h2 class="text-lg font-semibold text-gray-700">Order List</h2>
-            <div class="flex space-x-2">
-                <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition duration-200" onclick="window.location.href='/admin/orders'">Reset</button>
+    <div class="p-4 pt-20 md:pt-6 sm:p-6 md:pt-6 flex-1 min-w-0">
+        <header class="bg-white shadow-sm rounded-xl mb-6">
+            <div class="flex justify-between items-center px-6 py-4">
+                <h1 class="text-2xl font-semibold text-gray-800">Order Management</h1>
             </div>
-        </div>
+        </header>
 
-        <!-- Orders Table -->
-        <div class="bg-white shadow-md rounded-lg flex-1 overflow-y-auto">
-            <table class="w-full">
-                <thead class="bg-gray-200 sticky top-0">
-                    <tr>
-                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Change Status</th>
-                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% if (allOrders && allOrders.length > 0) { %>
-                        <% allOrders.forEach(order => { %>
-                                <tr class="border-b bg-white hover:bg-gray-50">
-                                    <td class="py-4 px-6 text-sm text-gray-700">
-                                        <%= order.orderId %>
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row flex-wrap justify-between items-center mb-6 gap-4">
+                <h2 class="text-xl font-semibold text-gray-800">Orders</h2>
+                <div class="flex flex-col sm:flex-row flex-wrap items-center gap-4 w-full sm:w-auto">
+                    <form id="searchForm" class="flex flex-col sm:flex-row flex-wrap items-center gap-4 w-full sm:w-auto">
+                        <div class="relative w-full sm:w-72">
+                            <input type="text" name="searchInput" value="<%= typeof query !== 'undefined' ? query : '' %>"
+                                placeholder="Search by order ID, customer name or email"
+                                class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <button type="submit"
+                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-150 w-full sm:w-auto">Search</button>
+                    </form>
+                    <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-150 w-full sm:w-auto"
+                        onclick="window.location.href='/admin/orders'">Reset</button>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="table-container">
+                <table class="w-full min-w-[820px]">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold tracking-wider">
+                            <th class="px-4 py-3 text-left">Order</th>
+                            <th class="px-4 py-3 text-left">Customer</th>
+                            <th class="px-4 py-3 text-left">Product</th>
+                            <th class="px-4 py-3 text-left">Amount</th>
+                            <th class="px-4 py-3 text-left">Status</th>
+                            <th class="px-4 py-3 text-left">Change Status</th>
+                            <th class="px-4 py-3 text-left">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <% if (allOrders && allOrders.length > 0) { %>
+                            <% allOrders.forEach(order => { %>
+                                <% let statusClass = ""; %>
+                                <% if (order.items && order.items.status === "Delivered") { statusClass = "bg-green-100 text-green-800"; }
+                                    else if (order.items && order.items.status === "Pending") { statusClass = "bg-yellow-100 text-yellow-800"; }
+                                    else if (order.items && order.items.status === "Cancelled") { statusClass = "bg-red-100 text-red-800"; }
+                                    else if (order.items && order.items.status === "Returned") { statusClass = "bg-purple-100 text-purple-800"; }
+                                    else { statusClass = "bg-gray-100 text-gray-800"; } %>
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900"><%= order.orderId %></div>
+                                        <div class="text-xs text-gray-500">
+                                            <%= new Date(order.createdAt).toLocaleString('en-US', {
+                                                year: 'numeric', month: 'short', day: 'numeric',
+                                                hour: '2-digit', minute: '2-digit', hour12: true
+                                            }) %>
+                                        </div>
                                     </td>
-                                    <td class="py-4 px-6 text-sm text-gray-700">
-                                        <%= new Date(order.createdAt).toLocaleString('en-US', { 
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            second: '2-digit',
-                                            hour12: true 
-                                        }) %>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900"><%= order.customer?.username || 'Unknown user' %></div>
+                                        <div class="text-xs text-gray-500"><%= order.customer?.email || '' %></div>
                                     </td>
-                                    <td class="py-4 px-6 text-sm">
-                                        <% let statusClass = ""; %>
-                                        <% if (order.items && order.items.status === "Delivered") { %>
-                                            <% statusClass = "bg-green-100 text-green-800"; %>
-                                        <% } else if (order.items && order.items.status === "Pending") { %>
-                                            <% statusClass = "bg-yellow-100 text-yellow-800"; %>
-                                        <% } else if (order.items && order.items.status === "Cancelled") { %>
-                                            <% statusClass = "bg-red-100 text-red-800"; %>
-                                        <% } else if (order.items && order.items.status === "Returned") { %>
-                                            <% statusClass = "bg-blue-100 text-blue-800"; %>
-                                        <% } else { %>
-                                            <% statusClass = "bg-gray-100 text-gray-800"; %>
-                                        <% } %>
-                                        <span class="status-display text-xs font-medium px-2.5 py-0.5 rounded-full <%= statusClass %>"
-                                            data-order-id="<%= order._id %>"
-                                            data-item-id="<%= order.items.productId %>">
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="flex items-center gap-3">
+                                            <img src="<%= order.product?.images?.[0] || '/default-image.jpg' %>"
+                                                alt="<%= order.product?.name || 'Product' %>"
+                                                class="h-10 w-10 rounded-md object-cover shrink-0">
+                                            <div class="min-w-0">
+                                                <div class="text-sm text-gray-900 truncate max-w-[160px]">
+                                                    <%= order.product?.name || 'Product unavailable' %>
+                                                </div>
+                                                <div class="text-xs text-gray-500">Qty: <%= order.items.quantity %></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        Rs. <%= Number(order.totalAmount || 0).toFixed(2) %>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full <%= statusClass %>">
                                             <%= order.items.status || "Unknown" %>
                                         </span>
                                     </td>
-                                    <td class="py-4 px-6 text-sm">
-                                        <select class="status-select border border-gray-300 rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <select class="status-select border border-gray-300 rounded-lg py-1.5 px-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             data-order-id="<%= order._id %>"
                                             data-item-id="<%= order.items.productId %>">
                                             <option value="Pending" <%= order.items.status === "Pending" ? "selected" : "" %>>Pending</option>
@@ -87,28 +114,30 @@
                                             <option value="Returned" <%= order.items.status === "Returned" ? "selected" : "" %>>Returned</option>
                                         </select>
                                     </td>
-                                    <td class="py-4 px-6 text-sm">
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <a href="/admin/view-order/<%= order._id %>/<%= order.items.productId %>"
-                                            class="bg-gray-600 text-white px-3 py-1 rounded-lg hover:bg-gray-700 transition duration-200">View Details</a>
+                                            class="text-sm bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition duration-200">View</a>
                                     </td>
-                                    
                                 </tr>
                             <% }) %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="5" class="py-4 px-6 text-sm text-gray-700 text-center">No orders are available</td>
-                        </tr>
-                    <% } %>
-                </tbody>
-            </table>
-        </div>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="7" class="px-6 py-8 text-sm text-gray-500 text-center">No orders found</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
             <div class="flex justify-center mt-6">
+                <% /* Preserve an active search across pagination clicks — without this, clicking a page number while searching silently dropped the search filter. */ const pageQuery = (typeof query !== 'undefined' && query) ? '&query=' + encodeURIComponent(query) : ''; %>
                 <nav class="flex justify-center mt-6">
                     <ul class="inline-flex items-center -space-x-px text-sm">
                       <!-- Previous Page -->
                       <% if(page > 1){ %>
                         <li>
-                          <a href="/admin/orders?page=<%= page - 1 %>&limit=<%= limit %>" 
+                          <a href="/admin/orders?page=<%= page - 1 %>&limit=<%= limit %><%= pageQuery %>"
                              class="flex items-center justify-center px-3 h-10 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -124,23 +153,23 @@
                           </span>
                         </li>
                       <% } %>
-                  
+
                       <!-- Page Numbers -->
                       <% for(let i = 1; i <= totalPages; i++) { %>
                         <li>
-                          <a href="/admin/orders?page=<%= i %>&limit=<%= limit %>" 
-                             class="flex items-center justify-center px-3 h-10 leading-tight 
-                                    border border-gray-300 
+                          <a href="/admin/orders?page=<%= i %>&limit=<%= limit %><%= pageQuery %>"
+                             class="flex items-center justify-center px-3 h-10 leading-tight
+                                    border border-gray-300
                                     <%= page === i ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-100' %>">
                             <%= i %>
                           </a>
                         </li>
                       <% } %>
-                  
+
                       <!-- Next Page -->
                       <% if(page < totalPages){ %>
                         <li>
-                          <a href="/admin/orders?page=<%= page + 1 %>&limit=<%= limit %>" 
+                          <a href="/admin/orders?page=<%= page + 1 %>&limit=<%= limit %><%= pageQuery %>"
                              class="flex items-center justify-center px-3 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -158,77 +187,76 @@
                       <% } %>
                     </ul>
                   </nav>
-                  
             </div>
-            
-    
+        </div>
     </div>
-        <!-- JavaScript for Sidebar Navigation and Status Updates -->
-        <script>
 
-            function showToast(message, type = 'error') {
-                Toastify({
-                    text: message,
-                    duration: 2000,
-                    gravity: "top",
-                    position: "center",
-                    backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
-                    stopOnFocus: true,
-                }).showToast();
-            }
-            // Sidebar Navigation
-            document.querySelectorAll('.nav-button').forEach(button => {
-                button.addEventListener('click', function () {
-                    const path = this.getAttribute('data-path');
-                    if (path) {
-                        window.location.href = path;
-                    }
+    <script>
+        function showToast(message, type = 'error') {
+            Toastify({
+                text: message,
+                duration: 2000,
+                gravity: "top",
+                position: "center",
+                backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
+                stopOnFocus: true,
+            }).showToast();
+        }
+
+        document.querySelectorAll('.status-select').forEach(select => {
+            select.dataset.previousValue = select.value;
+
+            select.addEventListener('change', async function () {
+                const orderId = this.getAttribute('data-order-id');
+                const productId = this.getAttribute('data-item-id');
+                const newStatus = this.value;
+                const previousValue = this.dataset.previousValue;
+
+                const confirm = await Swal.fire({
+                    title: 'Change item status?',
+                    text: `Set this item's status to "${newStatus}"?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#0f172a',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, update it'
                 });
-            });
 
-            document.getElementById('logoutButton').addEventListener('click', function () {
-                alert('Logging out...');
-                window.location.href = '/logout';
-            });
+                if (!confirm.isConfirmed) {
+                    this.value = previousValue;
+                    return;
+                }
 
-            document.querySelectorAll('.status-select').forEach(select => {
-                select.addEventListener('change', async function () {
-                    const orderId = this.getAttribute('data-order-id');
-                    const productId = this.getAttribute('data-item-id');
+                try {
+                    const response = await fetch(`/admin/update-orders/${orderId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: newStatus, productId: productId }),
+                    });
+                    const result = await response.json();
 
-                    const newStatus = this.value;
-
-                    try {
-                        const response = await fetch(`/admin/update-orders/${orderId}`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ action: newStatus, productId: productId }),
-                        });
-                        const result = await response.json();
-
-                        if (result.success) {
-                            showToast(result.message, 'success')
-
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1000);
-                        } else {
-                            showToast(result.message, 'error')
-                            this.value = result.previousStatus || 'Pending';
-                        }
-                    } catch (err) {
-                        console.error('Error updating status:', err);
-                        showToast('An error occurred while updating the status.');
-                        this.value = this.dataset.previousValue || 'Pending';
+                    if (result.success) {
+                        showToast(result.message, 'success')
+                        this.dataset.previousValue = newStatus;
+                        setTimeout(() => { window.location.reload(); }, 800);
+                    } else {
+                        showToast(result.message, 'error')
+                        this.value = previousValue;
                     }
-
-                    this.dataset.previousValue = newStatus;
-                });
+                } catch (err) {
+                    console.error('Error updating status:', err);
+                    showToast('An error occurred while updating the status.');
+                    this.value = previousValue;
+                }
             });
+        });
 
-        </script>
+        document.getElementById('searchForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const value = this.querySelector('input[name="searchInput"]').value.trim();
+            window.location.href = `/admin/orders?page=1&limit=<%= limit %>${value ? '&query=' + encodeURIComponent(value) : ''}`;
+        });
+    </script>
 </body>
 
 </html>

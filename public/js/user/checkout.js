@@ -1,3 +1,4 @@
+import { attachAddressEventListeners, injectAddressCard, refreshAddressContainer } from "./address.js";
 
 let isToastShowing = false;
 let isProcessing = false;
@@ -20,6 +21,8 @@ function showToast(message, type = 'error') {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    attachAddressEventListeners();
+
     // Modal elements
     const addModal = document.getElementById('addAddressModal');
     const editModal = document.getElementById('editAddressModal');
@@ -33,39 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Main checkout form
     const checkoutForm = document.getElementById('checkoutForm');
 
-    // Edit address button functionality
-    document.querySelectorAll('.editAddressBtn').forEach(button => {
-        button.addEventListener('click', function () {
-            if (isProcessing) return;
-
-            const addressId = this.getAttribute('data-address-id');
-            const addressDiv = this.closest('.bg-gray-200');
-            const fullName = addressDiv.querySelector('.font-medium').textContent.trim();
-            const nameParts = fullName.split(',');
-            const firstName = nameParts[0].trim();
-            const lastName = nameParts[1].split('(')[0].trim();
-            const addressType = fullName.match(/\((.*?)\)/)[1].trim();
-            const paragraphs = addressDiv.querySelectorAll('.text-gray-600');
-            const street = paragraphs[0].textContent.trim();
-            const city = paragraphs[1].textContent.trim();
-            const state = paragraphs[2].textContent.trim();
-            const phone = paragraphs[3].textContent.replace('Phone:', '').trim();
-            const zipElement = document.querySelector('#editAddressForm input[name="zip"]');
-            const zip = zipElement ? zipElement.value.trim() : "234343";
-
-            editForm.querySelector('input[name="firstName"]').value = firstName;
-            editForm.querySelector('input[name="lastName"]').value = lastName;
-            editForm.querySelector('input[name="street"]').value = street;
-            editForm.querySelector('input[name="city"]').value = city;
-            editForm.querySelector('input[name="state"]').value = state;
-            editForm.querySelector('input[name="zip"]').value = zip;
-            editForm.querySelector('input[name="phone"]').value = phone;
-            editForm.querySelector('select[name="addressType"]').value = addressType.toLowerCase();
-            editForm.setAttribute('data-address-id', addressId);
-
-            editModal.classList.remove('hidden');
-        });
-    });
+    // Edit address button functionality - now handled in attachAddressEventListeners
 
     // Add address form submission
     if (addForm) {
@@ -138,9 +109,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 showToast('Address added successfully!', 'success');
                 addModal.classList.add('hidden');
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
+                addForm.reset();
+
+                if (result.address) {
+                    injectAddressCard(result.address);
+                    attachAddressEventListeners();
+                } else {
+                    await refreshAddressContainer();
+                }
             } catch (err) {
                 showToast(err.message, 'error');
                 console.error('Error adding address:', err);
@@ -227,9 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 showToast('Address updated successfully!', 'success');
                 editModal.classList.add('hidden');
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
+                await refreshAddressContainer();
             } catch (err) {
                 showToast(err.message, 'error');
                 console.error('Error updating address:', err);
@@ -242,157 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 
-    // Set default address functionality
-    document.querySelectorAll('.setDefaultCheckbox').forEach(checkbox => {
-        checkbox.addEventListener('change', async function () {
-            if (isProcessing) {
-                this.checked = !this.checked;
-                return;
-            }
-
-            isProcessing = true;
-            const addressId = this.getAttribute('data-address-id');
-            const isChecked = this.checked;
-            const originalState = !isChecked;
-
-            try {
-                const response = await fetch(`/address/${addressId}/set-default`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ isDefault: isChecked })
-                });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || 'Failed to set default');
-                showToast(isChecked ? 'Address set as default!' : 'Address removed as default!', 'success');
-
-                // Uncheck all other checkboxes if this one is checked
-                if (isChecked) {
-                    document.querySelectorAll('.setDefaultCheckbox').forEach(cb => {
-                        if (cb !== this) {
-                            cb.checked = false;
-                        }
-                    });
-
-                    // Update hidden input for default address
-                    const defaultAddressInput = document.getElementById('defaultAddress');
-                    if (defaultAddressInput) {
-                        defaultAddressInput.value = addressId;
-                    }
-                }
-
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } catch (err) {
-                showToast(err.message, 'error');
-                console.error('Error setting default:', err);
-                this.checked = originalState;  // Revert to original state on error
-            } finally {
-                setTimeout(() => {
-                    isProcessing = false;
-                }, 2000);
-            }
-        });
-    });
-
-    // Delete address
-    document.querySelectorAll('.deleteAddressBtn').forEach(button => {
-        button.addEventListener('click', function () {
-            if (isProcessing) return;
-            const addressId = this.getAttribute('data-address-id');
-            deleteConfirm(addressId);
-        });
-    });
-
-    window.deleteConfirm = function (id) {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) deleteAddress(id);
-        });
-    };
-
-    async function deleteAddress(id) {
-        if (isProcessing) return;
-        isProcessing = true;
-
-        try {
-            const response = await fetch(`/address/${id}`, {
-                method: 'DELETE'
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || 'Something went wrong');
-            showToast('Address deleted successfully', 'success');
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } catch (error) {
-            console.error("Delete address error:", error);
-            showToast('Failed to delete address', 'error');
-        } finally {
-            setTimeout(() => {
-                isProcessing = false;
-            }, 2000);
-        }
-    }
-
-
-    let isProcessing = false;
-
-    document.querySelectorAll('.selectAddress').forEach(checkbox => {
-        checkbox.addEventListener('change', async function () {
-            if (isProcessing) {
-                this.checked = !this.checked;
-                return;
-            }
-
-            isProcessing = true;
-            const addressId = this.getAttribute('data-address-id');
-            console.log(addressId)
-            if (!addressId) {
-                console.error("Address ID not found for selected checkbox.");
-                return;
-            }
-
-            const isChecked = this.checked;
-
-            try {
-                const response = await fetch(`/address/${addressId}/select-address`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ isSelected: isChecked })
-                });
-
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || 'Failed to select address');
-
-                showToast(result.message, 'success');
-                localStorage.setItem('addressId', addressId)//temperory
-                console.log(`Selected address ID: ${addressId}`);
-
-                if (isChecked) {
-                    document.querySelectorAll('.selectAddress').forEach(cb => {
-                        if (cb !== this) {
-                            cb.checked = false;
-                        }
-                    });
-                }
-            } catch (err) {
-                showToast(err.message, 'error');
-                console.error('Error selecting address:', err);
-            } finally {
-                setTimeout(() => { isProcessing = false; }, 1000);
-            }
-        });
-    });
-
-
+    // Address event listeners are now attached via attachAddressEventListeners
 
     const paymentOptions = document.querySelectorAll('input[name="paymentMethod"]');
     paymentOptions.forEach(option => {
@@ -424,15 +248,18 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isProcessing) return;
 
             const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked').value;
-            const subTotal = parseFloat(document.getElementById('subTotal')?.textContent) || 0;
+            // Read the raw numeric data-value attribute rather than parsing the display text
+            // ("Rs. 99.00") — the display formatting is free to change without silently
+            // breaking order totals sent to the server (this broke exactly that way before).
+            const subTotal = parseFloat(document.getElementById('subTotal')?.dataset.value) || 0;
 
             const discountElement = document.getElementById('discount');
             let discount = 0;
             if (discountElement) {
-                discount = discountElement.textContent || 0;
+                discount = parseFloat(discountElement.dataset.value) || 0;
             }
 
-            const shippingCharge = document.getElementById('shipping').textContent || 0;
+            const shippingCharge = parseFloat(document.getElementById('shipping')?.dataset.value) || 0;
             const finalPriceElement = document.querySelector('.text-xl.font-bold.text-red-500');
             let finalPrice;
             if (finalPriceElement) {
@@ -447,13 +274,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            const selectedAddress = localStorage.getItem('addressId');
-
-            localStorage.removeItem('addressId');
-            // if (!selectedAddress) {
-            //     showToast('Please select an address', 'error');
-            //     return;
-            // }
+            const addressRadio = document.querySelector('input[name="deliveryAddress"]:checked');
+            if (!addressRadio) {
+                showToast('Please select a delivery address', 'error');
+                return;
+            }
+            const selectedAddress = addressRadio.dataset.addressId;
 
             if (selectedPayment === 'COD') {
                 if (finalPrice > 1000) {
@@ -697,7 +523,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 } catch (error) {
                     console.error("Error placing order:", error);
-                    console.log("error message is: ",error.message)
+                    console.log("error message is: ", error.message)
                     Swal.fire({
                         icon: "error",
                         title: "Network Error",
@@ -710,36 +536,146 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    document.getElementById('applyCoupon').addEventListener('submit', async function (e) {
-        e.preventDefault()
-        const couponCode = document.getElementById('couponCode').value
-        const totalAmount = document.getElementById('totalAmount').value
-        // const orderId  = document.getElementById('orderId').value
+    const couponForm = document.getElementById('applyCoupon');
+    const couponCodeInput = document.getElementById('couponCode');
+    const totalAmountInput = document.getElementById('totalAmount');
+    const couponActionSlot = document.getElementById('couponActionSlot');
+    const couponLine = document.getElementById('couponLine');
+    const couponAmountEl = document.getElementById('coupon');
+    const finalTotalEl = document.getElementById('finalTotal');
 
+    // Clicking a suggested coupon fills the code input instead of the user having to retype it.
+    document.querySelectorAll('.coupon-suggestion').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (couponCodeInput.readOnly) return; // a coupon is already applied — remove it first
+            couponCodeInput.value = btn.dataset.couponCode;
+            couponCodeInput.focus();
+        });
+    });
+
+    // Renders the Apply/Remove button for the current coupon state and (re)binds its handler —
+    // needed every time because swapping innerHTML drops any previously attached listener.
+    function renderCouponActionSlot(appliedCouponId) {
+        couponForm.dataset.appliedCouponId = appliedCouponId || '';
+
+        if (appliedCouponId) {
+            couponActionSlot.innerHTML = `
+                <button type="button" id="removeCouponBtn"
+                    class="bg-red-700 text-white px-4 py-2 text-sm hover:bg-black rounded-r-md h-full">
+                    Remove
+                </button>`;
+            document.getElementById('removeCouponBtn').addEventListener('click', handleRemoveCoupon);
+        } else {
+            couponActionSlot.innerHTML = `
+                <button type="submit"
+                    class="bg-gray-700 text-white px-4 py-2 text-sm hover:bg-black rounded-r-md h-full">
+                    Apply
+                </button>`;
+        }
+    }
+
+    // Updates the order summary total/coupon line in place — no page reload needed.
+    function updateOrderSummary({ finalPrice, discountAmount }) {
+        if (finalTotalEl && typeof finalPrice === 'number') {
+            finalTotalEl.dataset.price = finalPrice;
+            finalTotalEl.textContent = `Rs. ${finalPrice.toFixed(2)}`;
+        }
+        if (couponLine && couponAmountEl) {
+            if (typeof discountAmount === 'number') {
+                couponAmountEl.dataset.value = discountAmount;
+                couponAmountEl.textContent = `-Rs. ${discountAmount.toFixed(2)}`;
+                couponLine.classList.remove('hidden');
+            } else {
+                couponAmountEl.dataset.value = 0;
+                couponLine.classList.add('hidden');
+            }
+        }
+    }
+
+    async function handleRemoveCoupon() {
+        const appliedCouponId = couponForm.dataset.appliedCouponId;
+        if (!appliedCouponId) return; // nothing applied — nothing to remove
+
+        if (!window.confirm('Remove the applied coupon?')) return;
+
+        const removeBtn = document.getElementById('removeCouponBtn');
+        if (removeBtn) removeBtn.disabled = true;
+
+        try {
+            const response = await fetch('/remove-coupon', {
+                method: "PUT",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ couponId: appliedCouponId })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                showToast(result.message);
+                return;
+            }
+
+            showToast(result.message, 'success');
+
+            if (typeof result.finalPrice === 'number' && totalAmountInput) {
+                totalAmountInput.value = result.finalPrice;
+            }
+            updateOrderSummary({ finalPrice: result.finalPrice, discountAmount: null });
+
+            couponCodeInput.value = '';
+            couponCodeInput.readOnly = false;
+            couponCodeInput.classList.remove('bg-gray-100', 'text-gray-500');
+            renderCouponActionSlot(null);
+        } catch (error) {
+            console.log(error.message);
+            showToast('Something went wrong');
+        } finally {
+            if (removeBtn) removeBtn.disabled = false;
+        }
+    }
+
+    renderCouponActionSlot(couponForm.dataset.appliedCouponId);
+
+    couponForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const couponCode = couponCodeInput.value.trim();
+        const totalAmount = parseFloat(totalAmountInput.value) || 0;
 
         if (!couponCode) {
-            showToast('Please add available coupon', 'error')
+            showToast('Please enter a coupon code', 'error');
+            return;
         }
 
-        const response = await fetch('/apply-coupon', {
-            method: "POST",
-            headers: { 'Content-Type': "application/json" },
-            body: JSON.stringify({ couponCode, totalAmount })
-        })
+        const applyBtn = couponActionSlot.querySelector('button');
+        if (applyBtn) applyBtn.disabled = true;
 
-        const result = await response.json()
-       
-        if (!response.ok) {
-            showToast(result.message)
-            return
+        try {
+            const response = await fetch('/apply-coupon', {
+                method: "POST",
+                headers: { 'Content-Type': "application/json" },
+                body: JSON.stringify({ couponCode, totalAmount })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                showToast(result.message);
+                return;
+            }
+
+            showToast(result.message, 'success');
+
+            updateOrderSummary({ finalPrice: result.totalAmountWithCoupon, discountAmount: result.discountAmount });
+            couponCodeInput.value = result.couponCode || couponCode;
+            couponCodeInput.readOnly = true;
+            couponCodeInput.classList.add('bg-gray-100', 'text-gray-500');
+            renderCouponActionSlot(result.couponId);
+        } catch (error) {
+            console.error('Coupon error:', error);
+            showToast('Failed to apply coupon');
+        } finally {
+            if (applyBtn) applyBtn.disabled = false;
         }
-        showToast(result.message, 'success')
-        const coupon = document.getElementById('coupon')
-        coupon.innerHTML = totalAmount.toFixed(2)
-        setTimeout(() => {
-         location.reload()
-        }, 1200);
-    })
+    });
 
 
 
@@ -756,27 +692,3 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
-
-async function removeCoupon(couponId) {
-    try {
-        const response = await fetch('/remove-coupon', {
-            method: "PUT",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ couponId })
-        })
-        const result = await response.json()
-
-        if (!response.ok) {
-            showToast(result.message)
-            return
-        }
-
-        showToast(result.message, 'success')
-        setTimeout(() => {
-            location.reload()
-        }, 1000);
-    } catch (error) {
-        console.log(error.message)
-        showToast('Something went wrong')
-    }
-}

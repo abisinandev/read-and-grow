@@ -2,27 +2,32 @@ import express from 'express';
 const router = express.Router()
 import adminAuth from "../middlewares/adminAuth.js"
 import {
-    addCategory,
-    addCategoryGet,
-    addProducts,
-    addProductsPost,
     adminLoginGet,
     adminLoginPost,
     adminLogout,
-    blockProduct,
+} from "../controllers/admin/adminController.js"
+import {
     blockUser,
+    renderUserPanel,
+} from "../controllers/admin/userController.js"
+import {
+    addCategory,
+    addCategoryGet,
     categoryManagment,
     deleteCategory,
-    deleteProduct,
     editCategory,
     editCategoryPatch,
+    searchCategory,
+} from "../controllers/admin/categoryController.js"
+import {
+    addProducts,
+    addProductsPost,
+    blockProduct,
+    deleteProduct,
     editProduct,
     editProductsGet,
     renderProductPage,
-    renderUserPanel,
-    searchCategory,
-
-} from "../controllers/admin/adminController.js"
+} from "../controllers/admin/productController.js"
 import upload from '../utils/multer.js';
 import { acceptReturn, getOrderPage, rejectReturn, updateStatus, viewOrder } from '../controllers/admin/orderController.js';
 import { addOffers, deleteOffer, editOffer, renderAddOffers, renderEditOffers, renderOffersPage, selectCategory, selectProduct } from '../controllers/admin/offersController.js';
@@ -63,9 +68,9 @@ router.get('/search-category', adminAuth, searchCategory)
 //PRODUCT MANAGMENT
 router.get("/products", adminAuth, renderProductPage)
 router.get("/add-products", adminAuth, addProducts)
-router.post("/add-products", upload.array('images', 3), addProductsPost)
+router.post("/add-products", adminAuth, upload.array('images', 3), addProductsPost)
 router.get('/product/:id', adminAuth, editProductsGet)
-router.patch("/product/:id", upload.array('images', 3), editProduct)
+router.patch("/product/:id", adminAuth, upload.array('images', 3), editProduct)
 router.delete('/product/:id', adminAuth, deleteProduct)
 router.put('/block-product/:id', adminAuth, blockProduct)
 

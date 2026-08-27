@@ -4,13 +4,23 @@ import Product from "../../models/productSchema.js"
 import AppError from "../../utils/errorHandler.js"
 
 
+const escapeRegExp = (string = '') => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const renderOffersPage = async (req, res, next) => {
     try {
-        let { page, limit } = req.query
+        let { page, limit, query } = req.query
         page = parseInt(page) || 1
         limit = parseInt(limit) || 5
+        query = query || ''
         const skip = (page - 1) * limit
-        const offers = await Offer.find()
+
+        // Search by offer name — the list previously had no way to find one offer among many
+        // without paging through every screen.
+        const filter = query
+            ? { offerName: { $regex: escapeRegExp(query), $options: "i" } }
+            : {}
+
+        const offers = await Offer.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
@@ -18,12 +28,12 @@ export const renderOffersPage = async (req, res, next) => {
             .populate('categoryId')
 
         // console.log("offers :", offers)
-        
+
         const products = await Product.find()
-        .populate('offers')
+            .populate('offers')
         const categories = await Category.find()
-        .populate('offers')
-        
+            .populate('offers')
+
         let currentDate = new Date
         for (let offer of offers) {
             if (currentDate > offer.validTo) {
@@ -36,19 +46,19 @@ export const renderOffersPage = async (req, res, next) => {
         for (let product of products) {
             let productOffer = (product.offers.length > 0) ?
                 product.offers.filter(o => o.status !== false)
-                    .reduce((acc, curr) => curr.discountPercentage > acc.discountPercentage ? curr: acc, { discountPercentage: 0 }) : null
-                    console.log('productOffers', productOffer)
-   
+                    .reduce((acc, curr) => curr.discountPercentage > acc.discountPercentage ? curr : acc, { discountPercentage: 0 }) : null
+            console.log('productOffers', productOffer)
+
             let categoryOffer
             for (let category of categories) {
                 if (category.categoryName === product.category) {
                     categoryOffer = (category?.offers.length > 0) ?
                         category.offers.filter(o => o.status !== false)
-                         .reduce((acc, curr) => curr.discountPercentage > acc.discountPercentage ? curr : acc, { discountPercentage: 0 }) : null;
-                } 
+                            .reduce((acc, curr) => curr.discountPercentage > acc.discountPercentage ? curr : acc, { discountPercentage: 0 }) : null;
+                }
             }
-            console.log(categoryOffer,'category offer')
-           
+            console.log(categoryOffer, 'category offer')
+
             productOffer = productOffer && productOffer.discountPercentage > 0 ? productOffer : null;
             categoryOffer = categoryOffer && categoryOffer.discountPercentage > 0 ? categoryOffer : null;
 
@@ -58,21 +68,21 @@ export const renderOffersPage = async (req, res, next) => {
                 bestOffer = productOffer || categoryOffer;
             }
 
-            if(bestOffer){
+            if (bestOffer) {
                 await Product.findByIdAndUpdate(product._id, { $set: { bestOffer: bestOffer?.discountPercentage } })
-            }else{
+            } else {
                 await Product.findByIdAndUpdate(product._id, { $unset: { bestOffer: "" } })
             }
             console.log("product with Bestoffer:", bestOffer);
- 
-          
+
+
         }
 
 
-        const totalOffers = await Offer.find().countDocuments()
+        const totalOffers = await Offer.countDocuments(filter)
         const totalPages = Math.ceil(totalOffers / limit)
         res.render("admin/offers", {
-            totalOffers, totalPages, page, limit, offers
+            totalOffers, totalPages, page, limit, offers, query
         })
     } catch (error) {
         next(new AppError(`Offer mangament Failed : ${error}`, 500))
@@ -191,6 +201,9 @@ export const deleteOffer = async (req, res, next) => {
         const offerId = req.params.id
 
         const offer = await Offer.findById(offerId)
+        if (!offer) {
+            return res.status(404).json({ success: false, message: "Offer not found" })
+        }
         if (offer.offerType === 'Category') {
             await Category.findByIdAndUpdate(offer.categoryId, {
                 $pull: { offers: offer._id }
@@ -203,7 +216,7 @@ export const deleteOffer = async (req, res, next) => {
 
         await Offer.findByIdAndDelete(offer._id)
         return res.status(200).json({
-            success: false, message: 'Offer removed from the list'
+            success: true, message: 'Offer removed from the list'
         })
     } catch (error) {
         next(new AppError(`Delete offer faield : ${error}`, 500))
@@ -242,38 +255,59 @@ export const editOffer = async (req, res, next) => {
         if (!offerName || !discountPercentage || !validFrom || !validTo || !offerType) {
             return res.status(400).json({ success: false, message: "Please add required field" })
         }
+        if ((offerType === 'Product' && !productId) || (offerType === 'Category' && !categoryId)) {
+            return res.status(400).json({ success: false, message: "Please select a target for this offer type" })
+        }
 
         const offer = await Offer.findById(offerId)
         if (!offer) {
             return next(new AppError('Offer not found', 404));
         }
 
-        if (offer.offerType === 'Category') {
-            await Offer.findByIdAndUpdate(offerId, {
-                $set: {
-                    offerName,
-                    discountPercentage,
-                    validFrom,
-                    validTo,
-                    offerType,
-                    status,
-                    categoryId,
-                }
-            })
-        } else if (offer.offerType === 'Product') {
-            await Offer.findByIdAndUpdate(offerId, {
-                $set: {
-                    offerName,
-                    discountPercentage,
-                    validFrom,
-                    validTo,
-                    offerType,
-                    status,
-                    productId
-                }
-            })
-        }
+        // Branch on the SUBMITTED offerType, not the offer's previously-stored one — this used
+        // to branch on the old value, so changing an offer's type in the edit form (e.g.
+        // Product -> Category) silently kept updating the wrong field and left the new
+        // categoryId/productId unsaved.
+        const newTargetId = offerType === 'Category' ? categoryId : productId
 
+        // $set with an undefined value is silently dropped by Mongoose/the Mongo driver rather
+        // than clearing the field, so switching Product -> Category left the old productId
+        // sitting on the document unset-in-name-only. $unset the field that no longer applies.
+        await Offer.findByIdAndUpdate(offerId, {
+            $set: {
+                offerName,
+                discountPercentage,
+                validFrom,
+                validTo,
+                offerType,
+                status,
+                [offerType === 'Product' ? 'productId' : 'categoryId']: newTargetId,
+            },
+            $unset: {
+                [offerType === 'Product' ? 'categoryId' : 'productId']: ""
+            }
+        })
+
+        // Keep Product/Category.offers back-references in sync whenever the type or the
+        // target itself changed — otherwise the old target keeps pointing at an offer it no
+        // longer has, and the new target never gets linked, so "best offer" pricing goes stale.
+        const targetChanged = offer.offerType !== offerType
+            || (offer.offerType === 'Product' && String(offer.productId) !== String(productId))
+            || (offer.offerType === 'Category' && String(offer.categoryId) !== String(categoryId))
+
+        if (targetChanged) {
+            if (offer.offerType === 'Category' && offer.categoryId) {
+                await Category.findByIdAndUpdate(offer.categoryId, { $pull: { offers: offer._id } })
+            } else if (offer.offerType === 'Product' && offer.productId) {
+                await Product.findByIdAndUpdate(offer.productId, { $pull: { offers: offer._id } })
+            }
+
+            if (offerType === 'Category') {
+                await Category.findByIdAndUpdate(newTargetId, { $addToSet: { offers: offer._id } })
+            } else if (offerType === 'Product') {
+                await Product.findByIdAndUpdate(newTargetId, { $addToSet: { offers: offer._id } })
+            }
+        }
 
         return res.status(200).json({ success: true, message: 'Offer updated' })
 

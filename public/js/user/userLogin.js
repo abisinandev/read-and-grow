@@ -3,6 +3,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const username = document.getElementById("username")
     const password = document.getElementById("password")
     const form = document.getElementById("form")
+    const loginButton = document.getElementById("loginButton")
+    const loginButtonSpinner = document.getElementById("loginButtonSpinner")
+    const loginButtonText = document.getElementById("loginButtonText")
+
+    function setLoading(isLoading) {
+        if (!loginButton) return
+        loginButton.disabled = isLoading
+        if (loginButtonSpinner) loginButtonSpinner.classList.toggle('hidden', !isLoading)
+        if (loginButtonText) loginButtonText.textContent = isLoading ? 'Signing in...' : 'Login'
+    }
 
     const notyf = new Notyf({
         duration: 3000,
@@ -57,9 +67,9 @@ document.addEventListener('DOMContentLoaded', function () {
             showError(username, "Please enter a valid username or email")
         }
 
-        if(username.value.length < 3){
-            isValid = false,
-            showError(username,'Username must me 3 charecters')
+        if (username.value.length < 3) {
+            isValid = false
+            showError(username, 'Username must be at least 3 characters')
         }
 
         if (!isRequired(password.value)) {
@@ -75,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const url = "/login"
+        setLoading(true)
         try {
             const res = await fetch(url, {
                 method: "POST",
@@ -91,16 +102,22 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!res.ok) {
                 throw new Error(result.message || "Something went wrong");
             }
-    
-            notyf.success(result.message || "Login successful");
-    
-            setTimeout(() => {
-                window.location.href = result.redirect || "/";
-            }, 1000);
-    
+
+            if (result.success) {
+                notyf.success(result.message || "Login successful");
+                // Left disabled/spinning through the redirect on purpose — the page is about
+                // to navigate away, so there's nothing to re-enable it for.
+                setTimeout(() => {
+                    window.location.href = result.redirect || "/";
+                }, 1000);
+            } else {
+                setLoading(false)
+            }
+
         } catch (error) {
             console.error("Login error:", error);
             notyf.error(error.message);
+            setLoading(false)
         }
     });
 });

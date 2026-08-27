@@ -1,19 +1,10 @@
 import mongoose from "mongoose"
-import bcrypt from "bcrypt"
-import User from "../../models/userSchema.js"
-import jwt from "jsonwebtoken"
-import OTP from "../../models/otpSchema.js"
-import { sendOTP } from "../otpController.js"
 import AppError from "../../utils/errorHandler.js"
-import { appengine } from "googleapis/build/src/apis/appengine/index.js"
 import Product from "../../models/productSchema.js"
-import nodemailer from "nodemailer"
-import Category from "../../models/categorySchema.js"
-import Address from "../../models/addressSchema.js"
 import Cart from "../../models/cartSchema.js"
 import Wishlist from "../../models/wishListSchema.js"
-import { status } from "init"
 import Order from "../../models/orderSchema.js"
+import User from "../../models/userSchema.js"
 
 export const renderWishListPage = async (req, res, next) => {
     try {
@@ -32,32 +23,20 @@ export const renderWishListPage = async (req, res, next) => {
         }
 
         const cart = await Cart.findOne({ userId: user.id })
+        const cartProductIds = cart ? cart.items.map(i => i.productId.toString()) : [];
+
         for (let item of wishlist.items) {
             const product = await Product.findById(item.productId).lean()
 
             if (!product) {
-                console.log(`Product not found`);
-                itemsToRemove.push(item.productId);
+                console.log(`Product not found for wishlist item, skipping`);
                 continue;
             }
 
-            //REMOVING PRODUCTS INCLUDES IN CART 
-            for (let cartItem of cart.items) {
-                if (cartItem.productId.toString() === product._id.toString()) {
-                    itemsToRemove.push(item.productId);
-                    break;
-                }
+            //ONLY SHOW ITEMS NOT ALREADY IN CART (DISPLAY FILTER — DOES NOT MODIFY DB)
+            if (!cartProductIds.includes(product._id.toString())) {
+                wishlistItems.push(product)
             }
-
-            wishlistItems.push(product)
-        }
-        console.log("wishlistItems : ", wishlistItems);
-
-        if (itemsToRemove.length > 0) {
-            wishlist.items = wishlist.items.filter(item =>
-                !itemsToRemove.includes(item.productId.toString()) // FOR ENSURE NOT INCLUDES REMOVED PRODUCT
-            );
-            await wishlist.save();
         }
 
         return res.render("user/wishlist", {
@@ -154,7 +133,7 @@ export const deleteWishlist = async (req, res, next) => {
         })
 
     } catch (error) {
-        next(`wishlist product deletion failed : ${error}`, 500)
+        next(new AppError(`wishlist product deletion failed : ${error}`, 500))
     }
 }
 
@@ -219,10 +198,11 @@ export const addToCart = async (req, res, next) => {
 
         const product = await Product.findById(productId)
 
-        if (product.isBlocked || !product) {
+        //NULL CHECK MUST COME BEFORE ACCESSING ANY PROPERTY
+        if (!product || product.isBlocked) {
             return res.status(400).json({
                 success: false,
-                message: "Unavailable."
+                message: "Product unavailable."
             })
         }
 

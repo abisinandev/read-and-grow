@@ -14,34 +14,57 @@ export const getOrderPage = async (req, res, next) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
+        const query = req.query.query || '';
         let skip = (page - 1) * limit;
 
-        // const allOrders = await Order.find()
-        //     .sort({ createdAt: -1 })
-        //     .skip(skip)
-        //     .limit(limit)
-        //     .lean();
+        const basePipeline = [
+            { $unwind: "$items" },
+            { $lookup: { from: "users", localField: "userId", foreignField: "_id", as: "customer" } },
+            { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
+            { $lookup: { from: "products", localField: "items.productId", foreignField: "_id", as: "product" } },
+            { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+        ];
+
+        if (query) {
+            basePipeline.push({
+                $match: {
+                    $or: [
+                        { orderId: { $regex: query, $options: "i" } },
+                        { "customer.username": { $regex: query, $options: "i" } },
+                        { "customer.email": { $regex: query, $options: "i" } }
+                    ]
+                }
+            });
+        }
 
         const allOrders = await Order.aggregate([
-            { $unwind: "$items" },
+            ...basePipeline,
             { $sort: { createdAt: -1 } },
             { $skip: skip },
             { $limit: limit }
         ])
 
+        const totalOrdersCountResult = await Order.aggregate([
+            ...basePipeline,
+            { $count: "count" }
+        ]);
+        const totalOrders = totalOrdersCountResult[0]?.count || 0;
+        const totalPages = Math.ceil(totalOrders / limit);
+
         if (!allOrders.length) {
-            return res.status(404).render('admin/orders', {
-                allOrders: null,
+            if (req.headers["x-requested-with"] === "XMLHttpRequest") {
+                return res.status(200).json({ success: true, allOrders: [], totalOrders, totalPages, limit, page });
+            }
+            return res.render('admin/orders', {
+                allOrders: [],
                 limit,
                 page,
                 skip,
-                totalOrders: null,
-                totalPages: null,
+                totalOrders,
+                totalPages,
+                query
             })
         }
-
-        const totalOrders = await Order.countDocuments();
-        const totalPages = Math.ceil(totalOrders / limit);
 
         if (req.headers["x-requested-with"] === "XMLHttpRequest") {
             return res.json({
@@ -61,6 +84,7 @@ export const getOrderPage = async (req, res, next) => {
             skip,
             totalOrders,
             totalPages,
+            query
         });
 
     } catch (error) {
@@ -87,13 +111,25 @@ export const viewOrder = async (req, res, next) => {
 
         let index
         let totalQty = 0
-        order.items.forEach(item => {
+        order.items.forEach((item, i) => {
             if (item.productId.toString() == productId) {
-                index = order.items.indexOf(item)
+                index = i
             }
             totalQty += item.quantity
         });
 
+        // The URL's productId should always match one of the order's items when reached
+        // through a normal "View Details" click, but a stale/edited link (or item data that's
+        // shifted since the link was generated) previously crashed here instead of failing
+        // cleanly — order.items[undefined] is undefined, and Product.findById(undefined.productId)
+        // throws.
+        if (index === undefined) {
+            return res.status(404).redirect('/admin/orders')
+        }
+
+        // A product that's since been deleted from the catalog leaves this null — the page
+        // used to crash rendering the product image/name/category rather than showing the
+        // order with a "product no longer available" note.
         const viewOrder = await Product.findById(order.items[index].productId)
         console.log(viewOrder, 'vieworder')
 
@@ -319,22 +355,20 @@ export const rejectReturn = async (req, res, next) => {
     const productId = req.params.productId
     const orderId = req.params.orderId
     try {
-        const order = await Order.findById(orderId)
-        const product = await Product.findById(productId)
-        const user = req.user
+        // Previously this looped over EVERY item in the order and cleared isRequested on all
+        // of them — so rejecting one item's return request silently wiped out any OTHER item's
+        // separate pending return request in the same order. Now it targets only the item this
+        // request is actually about.
+        const order = await Order.findOneAndUpdate(
+            { _id: orderId, "items.productId": productId },
+            { $set: { "items.$.isRequested": false } },
+            { new: true }
+        );
 
-
-        for (let item of order.items) {
-            const update = await Order.findOneAndUpdate(
-                { _id: order._id, "items.productId": item.productId },
-                {
-                    $set: {
-                        "items.$.isRequested": false,
-                    }
-                },
-                { new: true }
-            );
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order or item not found" });
         }
+
         return res.status(200).json({ success: true, message: "Request rejected" })
     } catch (error) {
         next(new AppError(`Reject return request failed ${error}`, 500))

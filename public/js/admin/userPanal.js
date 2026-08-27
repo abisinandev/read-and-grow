@@ -1,4 +1,3 @@
-
 function showToast(message, type = 'error') {
     Toastify({
         text: message,
@@ -35,78 +34,15 @@ async function isBlock(url) {
             }
         }
     } catch (error) {
-        console.log("User panal : ",error.message)
+        console.log("User panal : ", error.message)
         showToast('Something went wrong');
     }
 }
 
-
- 
-    document.getElementById("formData").addEventListener("submit", searchUser);
-
-    async function searchUser(event) {
-        event.preventDefault();
-
-        const searchInput = document.querySelector('input[name="searchInput"]');
-        const value = searchInput.value.trim();
-
-        try {
-            const query = value ? `?q=${encodeURIComponent(value)}` : '';
-
-            const response = await fetch(`/admin/search${query}`, {
-                method: 'GET',
-                headers: { "Content-Type": "application/json" }
-            });
-
-            const result = await response.json();
-            console.log("Search result:", result);
-
-            const tbody = document.querySelector("tbody");
-
-            if (!response.ok || !result.users.length) {
-                tbody.innerHTML = `
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td colspan="6" class="px-6 py-4 text-center">
-                            <div class="text-bold text-red-600">
-                                No users found
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            updateTable(result.users);
-
-        } catch (error) {
-            console.log(`Search Failed: ${error.message}`);
-        }
-    }
-
-    function updateTable(users) {
-        const tbody = document.querySelector('tbody');
-        tbody.innerHTML = ""; // Clear existing content
-
-        users.forEach(user => {
-            tbody.innerHTML += `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 whitespace-nowrap">${user.id}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${user.username}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${user.email}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">${user.orderCount || 0}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-3 py-1 rounded-full text-sm 
-                            ${user.role === 'Admin' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'}">
-                            ${user.role}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <button onclick="isBlock('/admin/blockUser/${user._id}')"
-                            class="px-4 py-2 rounded-lg text-white ${user.isBlocked ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}">
-                            ${user.isBlocked ? 'Unblock' : 'Block'}
-                        </button>
-                    </td>
-                </tr>`;
-        });
-    }
- 
+// NOTE: search used to also be wired up from this file, but it had two problems: the listener
+// was attached at the top level of a non-deferred <script> loaded in <head> (so it ran before
+// #formData existed in the DOM and threw immediately, before ever attaching), and even if it
+// had attached, it called a `/admin/search` endpoint that doesn't exist, expecting a response
+// shape the server never returns. users.ejs's own inline script already implements search
+// correctly against the real `/admin/users` endpoint, so it's kept there instead of duplicated
+// (and broken) here.

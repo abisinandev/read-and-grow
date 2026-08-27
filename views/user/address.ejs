@@ -26,12 +26,12 @@
             </button>
             <% if(address && address.length>0) {%>
             <% address.forEach(address => { %>
-                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-start mb-4">
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-start mb-4" id="address-card-<%= address._id %>">
                     <div class="w-full">
                         <div>
                             <p class="font-medium">
                                 <%= address.firstName %>, <%= address.lastName %> (<%= address.addressType %>)
-                                <% if (address.isDefault) { %> <span class="text-green-600 text-sm">[Default]</span> <% } %>
+                                <% if (address.isDefault) { %> <span class="text-green-600 text-sm default-tag">[Default]</span> <% } %>
                             </p>
                             <p class="text-gray-600"><%= address.street %></p>
                             <p class="text-gray-600"><%= address.city %></p>
@@ -415,11 +415,16 @@
                                     cb.checked = false;
                                 }
                             });
+                            // Remove default tag from all
+                            document.querySelectorAll('.default-tag').forEach(tag => tag.remove());
+                            // Add default tag to this
+                            const nameEl = this.closest('.w-full').querySelector('.font-medium');
+                            nameEl.insertAdjacentHTML('beforeend', ' <span class="text-green-600 text-sm default-tag">[Default]</span>');
+                        } else {
+                            // Remove default tag from this
+                            const defaultTag = this.closest('.w-full').querySelector('.default-tag');
+                            if (defaultTag) defaultTag.remove();
                         }
-                        
-                        setTimeout(() => {
-                            location.reload();
-                        }, 2000);
                     } catch (err) {
                         showToast(err.message, 'error');
                         console.error('Error setting default:', err);
@@ -427,7 +432,7 @@
                     } finally {
                         setTimeout(() => {
                             isProcessing = false;
-                        }, 2000);
+                        }, 500);
                     }
                 });
             });
@@ -466,9 +471,19 @@
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.message || 'Something went wrong');
                     showToast('Address deleted successfully', 'success');
-                    setTimeout(() => {
-                        location.reload();
-                    }, 2000);
+                    // Remove from DOM
+                    const card = document.getElementById(`address-card-${id}`);
+                    if (card) {
+                        card.style.transition = 'opacity 0.3s, height 0.3s';
+                        card.style.opacity = '0';
+                        setTimeout(() => {
+                            card.remove();
+                            // Check if no addresses left
+                            if (document.querySelectorAll('[id^="address-card-"]').length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    }
                 } catch (error) {
                     console.error("Delete address error:", error);
                     showToast('Failed to delete address', 'error');

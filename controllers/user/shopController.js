@@ -1,22 +1,17 @@
-import mongoose from "mongoose"
-import bcrypt from "bcrypt"
 import User from "../../models/userSchema.js"
 import jwt from "jsonwebtoken"
-import OTP from "../../models/otpSchema.js"
-import { sendOTP } from "../otpController.js"
 import AppError from "../../utils/errorHandler.js"
-import { appengine } from "googleapis/build/src/apis/appengine/index.js"
 import Product from "../../models/productSchema.js"
-import nodemailer from "nodemailer"
 import Category from "../../models/categorySchema.js"
-import Address from "../../models/addressSchema.js"
 import Cart from "../../models/cartSchema.js"
 import Wishlist from "../../models/wishListSchema.js"
-import { status } from "init"
 import Order from "../../models/orderSchema.js"
 import Offer from "../../models/offersSchema.js"
 import Review from "../../models/reviewSchema.js"
+import { CONFIG } from "../../utils/constants/envConfig.js"
 
+// ESCAPES REGEX SPECIAL CHARS SO USER-SUPPLIED FILTER VALUES CAN'T BREAK/INJECT INTO A $regex QUERY
+const escapeRegExp = (string = '') => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 
 export const renderHomePage = async (req, res, next) => {
@@ -28,7 +23,7 @@ export const renderHomePage = async (req, res, next) => {
         // THIS FOR FORCEFULLY REMOVING USER WHEN ITS BLOCKED OR UNAVAILABLE
         if (token) {
             try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET)
+                const decoded = jwt.verify(token, CONFIG.JWT_SECRET)
                 user = decoded
 
                 const isUser = await User.findById(user.id, { role: "user" })
@@ -103,14 +98,11 @@ export const renderProductDetails = async (req, res, next) => {
             for (let item of wishlist?.items) {
                 const product = await Product.findById(item.productId).lean()
                 if (product) {
-                    wishlistItems.push(product)
+                    wishlistItems.push(product) //PUSH ONCE, FIXED DUPLICATE BUG
                 } else {
-                    console.log(`No product found`)
-                    // return res.status(400).json({ success: false, message: "No products found" })
+                    console.log(`No product found for wishlist item`)
                 }
-                wishlistItems.push(product)
             }
-
         }
 
         let cartItems = []
@@ -157,6 +149,7 @@ export const renderShopPage = async (req, res, next) => {
         const price = req.query.price || '';
         let page = req.query.page || 1;
         let limit = req.query.limit || 6;
+        let sort = req.query.sort || '';
 
         page = parseInt(page) || 1;
         limit = parseInt(limit) || 6;
@@ -165,7 +158,10 @@ export const renderShopPage = async (req, res, next) => {
         let query = { isBlocked: { $ne: true } };//QUERYING DATA SET TO AN OBJECT FOR SIMPLYFING CODE WE CAN ALSO SET WRITE MANUALLY MONGODB
 
         if (category) {
-            query.category = category;
+            // TRIMMED, CASE-INSENSITIVE, ANCHORED MATCH — product.category values in the DB
+            // are inconsistently saved with stray whitespace/casing (e.g. "Personal Growth "
+            // vs "Personal Growth"), so a strict equality check silently dropped real matches.
+            query.category = { $regex: '^' + escapeRegExp(category.trim()) + '\\s*$', $options: 'i' };
         }
 
         if (author) {
@@ -194,46 +190,68 @@ export const renderShopPage = async (req, res, next) => {
             }
         }
 
-        const products = await Product.find(query)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        let sortQuery = { createdAt: -1 };
+        if (sort === 'name_asc') sortQuery = { name: 1 };
+        if (sort === 'name_desc') sortQuery = { name: -1 };
+        if (sort === 'price_asc') sortQuery = { price: 1 };
+        if (sort === 'price_desc') sortQuery = { price: -1 };
 
-        const categories = await Category.find({ status: { $ne: "inactive" } });// FOR FETCHING ACTIVE CATEGORIES
+        // All of the following are independent reads — running them sequentially (as this
+        // used to) meant one request paid for 6+ round trips end-to-end, which is why a single
+        // /shop request could take 3+ seconds against a remote DB and made filtering/sorting
+        // feel broken even though each interaction was working. Firing them concurrently
+        // collapses that into the cost of the single slowest query instead of the sum of all.
+        const [
+            products,
+            managedCategories,
+            rawCategoryValues,
+            authors,
+            wishlist,
+            totalProducts
+        ] = await Promise.all([
+            Product.find(query).sort(sortQuery).skip(skip).limit(limit),
 
-        //FOR FIND WISHLIST ALREADY INCUDED PRODUCT 
+            // FOR FETCHING THE CATEGORY FILTER LIST DIRECTLY FROM THE PRODUCT CATALOG.
+            // Product.category is a free-text string (not a ref to Category), and the managed
+            // Category collection can be empty/out of sync with it, which left the sidebar with
+            // no category options at all. Deriving from real product data, trimmed + deduped
+            // case-insensitively, keeps the filter list always accurate and non-empty.
+            Category.find({ status: { $ne: "inactive" } }),
+            Product.distinct('category', { isBlocked: { $ne: true } }),
+
+            // FOR FETCHING ALL AUTHORS ACROSS THE WHOLE CATALOG (NOT JUST THE CURRENT PAGE)
+            Product.distinct('authorName', { isBlocked: { $ne: true } }),
+
+            // FOR FIND WISHLIST ALREADY INCLUDED PRODUCT
+            user ? Wishlist?.findOne({ userId: user.id }) : null,
+
+            Product.countDocuments(query)
+        ]);
+
+        const activeCategoryNames = new Set(managedCategories.map(c => c.categoryName.trim().toLowerCase()));
+        const hasManagedCategories = activeCategoryNames.size > 0;
+
+        const categoryMap = new Map(); // dedupe case-insensitively, keep first-seen display casing
+        rawCategoryValues.forEach(value => {
+            if (!value) return;
+            const trimmed = value.trim();
+            const key = trimmed.toLowerCase();
+            if (!trimmed) return;
+            // if categories are actively managed, respect admin's active/inactive setting
+            if (hasManagedCategories && !activeCategoryNames.has(key)) return;
+            if (!categoryMap.has(key)) categoryMap.set(key, trimmed);
+        });
+        const categories = Array.from(categoryMap.values())
+            .sort((a, b) => a.localeCompare(b))
+            .map(categoryName => ({ categoryName }));
+
+        // Batched into a single query instead of one findById per wishlist item (N+1).
         let wishlistItems = [];
-        const wishlist = await Wishlist?.findOne({ userId: user.id });
-        if (wishlist) {
-            for (let item of wishlist?.items) {
-                try {
-                    const product = await Product.findById(item.productId).lean();
-                    if (product) {
-                        wishlistItems.push(product);
-                    }
-                } catch (itemError) {
-                    console.error(`Error fetching wishlist item: ${itemError.message}`);
-                }
-            }
+        if (wishlist?.items?.length) {
+            const wishlistProductIds = wishlist.items.map(item => item.productId);
+            wishlistItems = await Product.find({ _id: { $in: wishlistProductIds } }).lean();
         }
 
-        let cartItems = []
-        const cart = await Cart.findOne({ userId: user.id })
-
-        if (cart) {
-            for (let item of cart.items) {
-                const product = await Product.findById(item.productId)
-                // if (!product) {
-                //     console.log(`No product found`)
-                //     return res.status(400).json({ success: false, message: "No products found" })
-                // }
-                cartItems.push(product)
-
-            }
-        }
-        console.log(cartItems, 'cartItems')
-
-        const totalProducts = await Product.countDocuments(query);
         const totalPages = Math.ceil(totalProducts / limit);
 
         const responseData = {
@@ -248,11 +266,11 @@ export const renderShopPage = async (req, res, next) => {
             category: category || "",
             author: author || "",
             categories,
+            authors,
             errorMessage: products?.length === 0 ? "No products found." : null,
             user: req.user,
             wishlistItems,
-            cartItems,
-            currentSort: "",
+            currentSort: sort || "default",
 
         };
 
@@ -320,6 +338,7 @@ export const sortProducts = async (req, res, next) => {
             category: null,
             author: req.query.author || "",
             categories: [],
+            authors: [],
             errorMessage: products.length === 0 ? "No products found." : null,
             user: req.user,
             wishlistItems: [],

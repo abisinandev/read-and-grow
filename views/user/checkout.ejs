@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.all.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script src="/js/user/checkout.js"></script>
+    <script src="/js/user/checkout.js?v=2" type="module"></script>
 </head>
 
 <body class="bg-gray-100">
@@ -21,90 +21,108 @@
 
         <!-- Main Container -->
         <div class="container mx-auto px-4 py-8 max-w-7xl">
+            <!-- Breadcrumb -->
+            <nav class="text-gray-600 text-sm mb-6">
+                <ol class="flex space-x-2">
+                    <li><a href="/" class="hover:text-gray-900 transition">Home</a></li>
+                    <li><span class="text-gray-400">/</span></li>
+                    <li><a href="/cart" class="hover:text-gray-900 transition">Shopping Cart</a></li>
+                    <li><span class="text-gray-400">/</span></li>
+                    <li class="text-gray-900 font-medium">Checkout</li>
+                </ol>
+            </nav>
+
             <div class="flex flex-col md:flex-row gap-8">
                 <div class="bg-white p-6 rounded-lg shadow-sm flex-1">
                     <h2 class="text-xl font-bold mb-6">Checkout</h2>
 
                     <!-- Checkout Form -->
-                    <form id="checkoutForm" >
+                    <form id="checkoutForm">
                         <!-- Delivery Section -->
                         <div class="mb-6">
                             <h3 class="text-lg font-medium mb-3 flex items-center">Delivery</h3>
 
-                            <!-- Existing Address -->
-                            <% if(address.length==0) {%>
-                                <div class="text-center font-bold">No address </div>
+                            <!-- Delivery Addresses -->
+                            <% if(address.length===0) { %>
+                                <div class="text-center py-6 text-gray-500 font-medium">
+                                    No saved addresses. Add one below.
+                                </div>
                                 <% } %>
                                     <div id="addressContainer">
-                                        <% address.forEach(address=> { %>
-                                            <div
-                                                class="bg-gray-200 w-full p-4 rounded-lg shadow-sm border border-gray-200 flex justify-between items-start mb-4">
-                                                <div class="w-full">
-                                                    <div>
-                                                        <p class="font-medium">
-                                                            <%= address.firstName %>, <%= address.lastName %> (<%=
-                                                                address.addressType %>)
-                                                                <% if (address.isDefault) { %> <span
-                                                                    class="text-green-600 text-sm">[Default]</span>
+                                        <% address.forEach((addr, idx)=> { %>
+                                            <div id="addr-card-<%= addr._id %>"
+                                                class="relative w-full p-4 rounded-xl border-2 transition-all mb-3 cursor-pointer
+                                               <%= addr.isSelected ? 'border-black bg-gray-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-400' %>">
+
+                                                <!-- Top row: radio + name + badges -->
+                                                <div class="flex items-start gap-3">
+                                                    <!-- Radio for delivery selection -->
+                                                    <input type="radio" name="deliveryAddress"
+                                                        class="selectAddress mt-1 h-4 w-4 accent-black shrink-0"
+                                                        data-address-id="<%= addr._id %>" <%=addr.isSelected ? 'checked'
+                                                        : '' %>>
+
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                                                            <p class="font-semibold text-gray-800 text-sm">
+                                                                <%= addr.firstName %>
+                                                                    <%= addr.lastName %>
+                                                            </p>
+                                                            <span
+                                                                class="text-xs px-2 py-0.5 rounded-full font-medium capitalize
+                                                        <%= addr.addressType === 'home' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' %>">
+                                                                <%= addr.addressType %>
+                                                            </span>
+                                                            <% if (addr.isDefault) { %>
+                                                                <span
+                                                                    class="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                                                    ✓ Default
+                                                                </span>
                                                                 <% } %>
+                                                        </div>
+
+                                                        <p class="text-gray-600 text-sm leading-5">
+                                                            <%= addr.street %>, <%= addr.city %>, <%= addr.state %> —
+                                                                        <%= addr.pincode %>
                                                         </p>
-                                                        <p class="text-gray-600">
-                                                            <%= address.street %>
-                                                        </p>
-                                                        <p class="text-gray-600">
-                                                            <%= address.city %>
-                                                        </p>
-                                                        <p class="text-gray-600">
-                                                            <%= address.state %>
-                                                        </p>
-                                                        <p class="text-gray-600">Phone: <%= address.phoneNumber %>
-                                                        </p>
-                                                        <p class="text-gray-600zip-data">
-                                                          pincode :  <%= address.pincode    %>
+                                                        <p class="text-gray-500 text-xs mt-1">📞 <%= addr.phoneNumber %>
                                                         </p>
                                                     </div>
-                                                    <!-- Radio button for address selection -->
-                                                    <div class="mt-2">
-                                                        <label class="flex items-center space-x-2 cursor-pointer">
-                                                            <input type="checkbox"
-                                                                class="selectAddress h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                                                data-address-id="<%= address._id %>"
-                                                                <%= address.isSelected ? 'checked' : '' || '' %>>
-                                                            <span class="text-sm text-gray-700">Select address</span>
-                                                        </label>
-                                                    </div>
-                                                    <!-- Hidden input to store default address -->
-                                                    <div class="mt-2">
-                                                        <label class="flex items-center space-x-2 cursor-pointer">
-                                                            <input type="checkbox"
-                                                                class="setDefaultCheckbox h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                                                data-address-id="<%= address._id %>"
-                                                                <%=address.isDefault ? 'checked' : '' %>>
-                                                            <span class="text-sm text-gray-700">Set as Default</span>
-                                                        </label>
-                                                        <input type="hidden" name="defaultAddress" id="defaultAddress"
-                                                            value="<%= address.isDefault ? address._id : '' %>">
+
+                                                    <!-- Action buttons -->
+                                                    <div class="flex items-center gap-1 shrink-0">
+                                                        <button type="button"
+                                                            class="editAddressBtn p-1.5 rounded-lg hover:bg-gray-100 transition"
+                                                            data-address-id="<%= addr._id %>" title="Edit address">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" height="18"
+                                                                viewBox="0 -960 960 960" width="18" fill="#555">
+                                                                <path
+                                                                    d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h357l-80 80H200v560h560v-278l80-80v358q0 33-23.5 56.5T760-120H200Zm280-360ZM360-360v-170l367-367q12-12 27-18t30-6q16 0 30.5 6t26.5 18l56 57q11 12 17 26.5t6 29.5q0 15-5.5 29.5T897-728L530-360H360Z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button type="button"
+                                                            class="deleteAddressBtn p-1.5 rounded-lg hover:bg-red-50 transition"
+                                                            data-address-id="<%= addr._id %>" title="Delete address">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" height="18"
+                                                                viewBox="0 -960 960 960" width="18" fill="#e53e3e">
+                                                                <path
+                                                                    d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
+                                                            </svg>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                <div class="flex space-x-2 items-start">
-                                                    <button type="button"
-                                                        class="editAddressBtn text-gray-600 hover:text-gray-900"
-                                                        data-address-id="<%= address._id %>">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="#4f4f4f">
-                                                            <path
-                                                                d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h357l-80 80H200v560h560v-278l80-80v358q0 33-23.5 56.5T760-120H200Zm280-360ZM360-360v-170l367-367q12-12 27-18t30-6q16 0 30.5 6t26.5 18l56 57q11 12 17 26.5t6 29.5q0 15-5.5 29.5T897-728L530-360H360Zm481-424-56-56 56 56ZM440-440h56l232-232-28-28-29-28-231 231v57Zm260-260-29-28 29 28 28 28-28-28Z" />
-                                                        </svg>
-                                                    </button>
-                                                    <button type="button" class="deleteAddressBtn"
-                                                        data-address-id="<%= address._id %>">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="#4f4f4f">
-                                                            <path
-                                                                d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
-                                                        </svg>
-                                                    </button>
+
+                                                <!-- Set as Default link -->
+                                                <div class="mt-2 pl-7">
+                                                    <% if (!addr.isDefault) { %>
+                                                        <button type="button"
+                                                            class="setDefaultCheckbox text-xs text-gray-400 hover:text-black transition underline underline-offset-2"
+                                                            data-address-id="<%= addr._id %>" data-is-default="false">
+                                                            Set as default
+                                                        </button>
+                                                        <% } %>
                                                 </div>
                                             </div>
-
                                             <% }) %>
                                     </div>
 
@@ -140,8 +158,10 @@
                                     class="border border-gray-300 rounded-md p-3 w-16 h-10 flex items-center justify-center bg-white cursor-pointer hover:border-blue-500 payment-option">
                                     <input type="radio" name="paymentMethod" value="Wallet" class="sr-only" required>
                                     <span class="font-bold text-sm" id="Wallet">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 -960 960 960" fill="#000000">
-                                            <path d="M200-200v-560 560Zm0 80q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v100h-80v-100H200v560h560v-100h80v100q0 33-23.5 56.5T760-120H200Zm320-160q-33 0-56.5-23.5T440-360v-240q0-33 23.5-56.5T520-680h280q33 0 56.5 23.5T880-600v240q0 33-23.5 56.5T800-280H520Zm280-80v-240H520v240h280Zm-160-60q25 0 42.5-17.5T700-480q0-25-17.5-42.5T640-540q-25 0-42.5 17.5T580-480q0 25 17.5 42.5T640-420Z"/>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                            viewBox="0 -960 960 960" fill="#000000">
+                                            <path
+                                                d="M200-200v-560 560Zm0 80q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v100h-80v-100H200v560h560v-100h80v100q0 33-23.5 56.5T760-120H200Zm320-160q-33 0-56.5-23.5T440-360v-240q0-33 23.5-56.5T520-680h280q33 0 56.5 23.5T880-600v240q0 33-23.5 56.5T800-280H520Zm280-80v-240H520v240h280Zm-160-60q25 0 42.5-17.5T700-480q0-25-17.5-42.5T640-540q-25 0-42.5 17.5T580-480q0 25 17.5 42.5T640-420Z" />
                                         </svg>
                                     </span>
                                 </label>
@@ -152,11 +172,13 @@
                                 </label>
                                 <label
                                     class="border border-gray-300 rounded-md p-3 w-16 h-10 flex items-center justify-center bg-white cursor-pointer hover:border-blue-500 payment-option">
-                                    <input type="radio" name="paymentMethod" value="Razorpay" class="sr-only"
-                                        required>
+                                    <input type="radio" name="paymentMethod" value="Razorpay" class="sr-only" required>
                                     <div class="flex space-x-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                                            <path d="m22.436 0-11.91 7.773-1.174 4.276 6.625-4.297L11.65 24h4.391l6.395-24zM14.26 10.098 3.389 17.166 1.564 24h9.008l3.688-13.902Z" fill="#2855f7" stroke-width="1"/>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                            viewBox="0 0 24 24">
+                                            <path
+                                                d="m22.436 0-11.91 7.773-1.174 4.276 6.625-4.297L11.65 24h4.391l6.395-24zM14.26 10.098 3.389 17.166 1.564 24h9.008l3.688-13.902Z"
+                                                fill="#2855f7" stroke-width="1" />
                                         </svg>
                                     </div>
                                 </label>
@@ -169,265 +191,284 @@
                                 Confirm Order</button>
                         </div>
                     </form>
-            </div>
-                    <!-- Right Side - Order Summary -->
-                    <div class="bg-white p-6 rounded-lg shadow-sm w-full md:w-96">
-                        <div class="flex items-center mb-6">
+                </div>
+                <!-- Right Side - Order Summary -->
+                <div class="bg-white p-6 rounded-lg shadow-sm w-full md:w-96">
+                    <div class="flex items-center mb-6">
                         <div class="text-red-500 mr-2"><i class="fas fa-tags"></i></div>
                         <span class="text-red-500 font-medium">Coupon Available</span>
                     </div>
-                    
-                        <!-- Coupon Code Input -->
-                        <div class="mb-6">
-                            <div class="mt-3">
-                                <h4 class="text-sm font-medium mb-2">Available Coupons:</h4>
+
+                    <!-- Coupon Code Input -->
+                    <div class="mb-6">
+                        <div class="mt-3">
+                            <h4 class="text-sm font-medium mb-2">Available Coupons:</h4>
+                            <% if (coupons.length) { %>
                                 <ul class="space-y-2">
-                                    <% coupons.forEach(coupon => { %>
-                                        <li class="flex justify-between items-center border border-gray-200 rounded p-2 text-sm">
-                                            <span class="font-medium"><%= coupon.couponCode %></span>
-                                            <span class="text-green-600">Rs. <%= coupon.discountValue %> off</span>
+                                    <% coupons.forEach(coupon=> { %>
+                                        <li>
+                                            <button type="button" data-coupon-code="<%= coupon.couponCode %>"
+                                                class="coupon-suggestion w-full flex justify-between items-center border border-gray-200 rounded p-2 text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors text-left">
+                                                <span class="font-medium">
+                                                    <%= coupon.couponCode %>
+                                                </span>
+                                                <span class="text-green-600">Rs. <%= coupon.discountValue %> off</span>
+                                            </button>
                                         </li>
-                                    <% }) %>
+                                        <% }) %>
                                 </ul>
-                            </div>
-                            <form class="flex items-center mb-2 w-full" id="applyCoupon">
-                                <input id="totalAmount" type="hidden" value="<%= finalPrice %>">                           
-                                <input type="text" id="couponCode" 
-                                       value="<%= appliedCoupon ? appliedCoupon.couponCode : '' %>" 
-                                       placeholder="Discount coupon code" 
-                                       class="flex-grow border border-gray-300 p-2 text-sm focus:outline-none rounded-l-md h-full">
-                            
+                                <% } else { %>
+                                    <p class="text-sm text-gray-500">No coupons available for you right now.</p>
+                                    <% } %>
+                        </div>
+                        <form class="flex items-center mb-2 w-full" id="applyCoupon"
+                            data-applied-coupon-id="<%= appliedCoupon ? appliedCoupon._id : '' %>">
+                            <input id="totalAmount" type="hidden" value="<%= finalPrice %>">
+                            <input type="text" id="couponCode"
+                                value="<%= appliedCoupon ? appliedCoupon.couponCode : '' %>"
+                                placeholder="Discount coupon code"
+                                <%= appliedCoupon ? 'readonly' : '' %>
+                                class="flex-grow border border-gray-300 p-2 text-sm focus:outline-none rounded-l-md h-full <%= appliedCoupon ? 'bg-gray-100 text-gray-500' : '' %>">
+
+                            <!-- Swapped between Apply/Remove by JS as the coupon state changes, so applying or
+                                 removing a coupon updates in place instead of requiring a full page reload. -->
+                            <span id="couponActionSlot">
                                 <% if (!appliedCoupon) { %>
-                                    <button type="submit" 
-                                            class="bg-gray-700 text-white px-4 py-2 text-sm hover:bg-black rounded-r-md h-full">
+                                    <button type="submit"
+                                        class="bg-gray-700 text-white px-4 py-2 text-sm hover:bg-black rounded-r-md h-full">
                                         Apply
                                     </button>
-                                <% } else { %>
-                                    <button type="button" 
-                                            onclick="removeCoupon('<%= appliedCoupon._id %>')" 
+                                    <% } else { %>
+                                        <button type="button" id="removeCouponBtn"
                                             class="bg-red-700 text-white px-4 py-2 text-sm hover:bg-black rounded-r-md h-full">
-                                        Remove
-                                    </button>
-                                <% } %>
-                            </form>                            
-                            
-                        </div>
+                                            Remove
+                                        </button>
+                                        <% } %>
+                            </span>
+                        </form>
 
-                        <!-- Product List with -->
-                        <div class="space-y-4 mb-6">
-                            <% checkoutProducts.forEach(product=>{ %>
-                                <div class="flex items-center justify-between border-b pb-3">
-                                    <% const cartItem=userCart.items.find(p=>p.productId.toString() ==
-                                        product._id.toString()) %>
-                                        <div class="flex items-center">
-                                            <div class="w-16 h-20 mr-3 overflow-hidden rounded-md">
-                                                <img src="<%= product.images[0] %>" alt="Product image"
-                                                    class="w-full h-full object-cover">
-                                            </div>
-                                            <div>
-                                                <p class="font-small">
-                                                    <%= product.name %>
-                                                </p>
-                                                    <p class="text-sm text-gray-500">Qty: <span id="quantity">
-                                                            <%= cartItem ? cartItem.quantity : 0 %>
-                                                        </span></p>
-                                                <% if(product.bestOffer > 0) {%>
-                                                    <p class="font-small text-red-500">
-                                                        <%= product.bestOffer %>% off
-                                                    </p>
-                                                <% } %>
-                                                <p class="text-black">Rs. <%= product.price %>
-                                                </p>
-                                            </div>
+                    </div>
+
+                    <!-- Product List with -->
+                    <div class="space-y-4 mb-6">
+                        <% checkoutProducts.forEach(product=>{ %>
+                            <div class="flex items-center justify-between border-b pb-3">
+                                <% const cartItem=userCart.items.find(p=>p.productId.toString() ==
+                                    product._id.toString()) %>
+                                    <div class="flex items-center">
+                                        <div class="w-16 h-20 mr-3 overflow-hidden rounded-md">
+                                            <img src="<%= product.images[0] %>" alt="Product image"
+                                                class="w-full h-full object-cover">
                                         </div>
-                                </div>
-                                <% }) %>
+                                        <div>
+                                            <p class="font-small">
+                                                <%= product.name %>
+                                            </p>
+                                            <p class="text-sm text-gray-500">Qty: <span id="quantity">
+                                                    <%= cartItem ? cartItem.quantity : 0 %>
+                                                </span></p>
+                                            <% if(product.bestOffer> 0) {%>
+                                                <p class="font-small text-red-500">
+                                                    <%= product.bestOffer %>% off
+                                                </p>
+                                                <% } %>
+                                                    <p class="text-black">Rs. <%= product.price %>
+                                                    </p>
+                                        </div>
+                                    </div>
+                            </div>
+                            <% }) %>
+                    </div>
+
+
+                    <!-- Order Summary -->
+                    <div class="space-y-2 border-t pt-3 border-gray-200">
+                        <div class="flex justify-between text-sm">
+                            <span>Subtotal</span>
+                            <span id="subTotal" data-value="<%= subTotal %>">
+                                Rs. <%= subTotal.toFixed(2) %>
+                            </span>
                         </div>
-
-
-                        <!-- Order Summary -->
-                        <div class="space-y-2 border-t pt-3 border-gray-200">
-                            <div class="flex justify-between text-sm">
-                                <span >Subtotal</span>
-                                <span id="subTotal"><%= subTotal.toFixed(2) %></span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span >Shipping (Not be Refunded)</span>
-                                <span id="shipping"><%= shippingCharge %></span>
-                            </div>
-                            <% if(appliedCoupon) {%>
-                                <div class="flex justify-between text-sm text-red-500">
-                                    <span>Coupon</span>
-                                    <span id="coupon">-<%= appliedCoupon.discountValue %></span>
-                                </div>
-                            <% } %>
-                            <% if(totalDiscount>0) {%>
+                        <div class="flex justify-between text-sm">
+                            <span>Shipping</span>
+                            <span id="shipping" data-value="<%= shippingCharge %>">
+                                Rs. <%= shippingCharge %>
+                            </span>
+                        </div>
+                        <!-- Always rendered (just hidden when no coupon is applied) so JS can reveal/update it
+                             in place after an AJAX apply/remove instead of needing a page reload. -->
+                        <div id="couponLine" class="flex justify-between text-sm text-red-500 <%= appliedCoupon ? '' : 'hidden' %>">
+                            <span>Coupon</span>
+                            <span id="coupon" data-value="<%= appliedCoupon ? appliedCoupon.discountValue : 0 %>">-Rs. <%= appliedCoupon ? appliedCoupon.discountValue : 0 %></span>
+                        </div>
+                        <% if(totalDiscount>0) {%>
                             <div class="flex justify-between text-sm text-red-500">
                                 <span>Discount</span>
-                                <span id="discount"><%= totalDiscount.toFixed(2) %></span>
+                                <span id="discount" data-value="<%= totalDiscount %>">
+                                    -Rs. <%= totalDiscount.toFixed(2) %>
+                                </span>
                             </div>
                             <% } %>
 
-                        </div>
+                    </div>
 
-                        <!-- Total -->
-                        <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
-                            <h3 class="text-lg font-bold">Total</h3>
-                            <span class="text-xl font-bold text-red-500" data-price="<%= finalPrice %>">
-                                Rs. <%= finalPrice.toFixed(2) %>
+                    <!-- Total -->
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
+                        <h3 class="text-lg font-bold">Total</h3>
+                        <span id="finalTotal" class="text-xl font-bold text-red-500" data-price="<%= finalPrice %>">
+                            Rs. <%= finalPrice.toFixed(2) %>
+                        </span>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Add Address Modal -->
+        <div id="addAddressModal"
+            class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <h3 class="text-lg font-medium mb-4">Add New Delivery Address</h3>
+                    <form id="addAddressForm" class="space-y-4">
+                        <div class="flex gap-4">
+                            <span id="userId" hidden>
+                                <%= user.id %>
                             </span>
-                            
+                            <input type="text" name="firstName" placeholder="First name"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" name="lastName" placeholder="Last name"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
-                    </div>
+                        <select name="addressType" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <option value="" disabled selected>Select Address Type</option>
+                            <option value="home">Home</option>
+                            <option value="work">Work</option>
+                        </select>
+                        <div class="flex gap-4">
+                            <input type="text" name="city" placeholder="City/District/Town"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" name="state" placeholder="State"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <input type="text" name="street" placeholder="Street"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <div class="flex gap-4">
+                            <input type="text" name="phone" placeholder="Phone number"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" name="zip" placeholder="Pincode"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex justify-between mt-4">
+                            <button type="button" id="cancelAddBtn"
+                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded">Cancel</button>
+                            <button type="submit" id="saveAddBtn"
+                                class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Save
+                                Address</button>
+                        </div>
+                    </form>
                 </div>
             </div>
+        </div>
 
+        <!-- Edit Address Modal -->
+        <div id="editAddressModal"
+            class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <h3 class="text-lg font-medium mb-4">Edit Delivery Address</h3>
+                    <form id="editAddressForm" class="space-y-4">
+                        <div class="flex gap-4">
+                            <span id="userId" hidden>
+                                <%= user.id %>
+                            </span>
+                            <span id="addressId" hidden>
+                                <%= address._id %>
+                            </span>
+                            <input type="text" value="<%= address.firstName %>" name="firstName"
+                                placeholder="First name"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" value="<%= address.lastName %>" name="lastName" placeholder="Last name"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <select name="addressType" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <option value="" disabled>Select Address Type</option>
+                            <option value="home">Home</option>
+                            <option value="work">Work</option>
+                        </select>
+                        <div class="flex gap-4">
+                            <input type="text" value="<%= address.city %>" name="city" placeholder="City/District/Town"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" value="<%= address.state %>" name="state" placeholder="State"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <input type="text" value="<%= address.street %>" name="street" placeholder="Street"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <div class="flex gap-4">
+                            <input type="text" value="<%= address.phoneNumber %>" name="phone"
+                                placeholder="Phone number"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" value="<%= address[0]?.pincode || address?.pincode %>" name="zip"
+                                placeholder="Pincode"
+                                class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex justify-between mt-4">
+                            <button type="button" id="cancelEditBtn"
+                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded">Cancel</button>
+                            <button type="submit" id="saveEditBtn"
+                                class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Save
+                                Address</button>
+                        </div>
+                    </form>
 
-            <!-- Add Address Modal -->
-            <div id="addAddressModal"
-                class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
-                <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-                    <div class="mt-3">
-                        <h3 class="text-lg font-medium mb-4">Add New Delivery Address</h3>
-                        <form id="addAddressForm" class="space-y-4">
-                            <div class="flex gap-4">
-                                <span id="userId" hidden>
-                                    <%= user.id %>
-                                </span>
-                                <input type="text" name="firstName" placeholder="First name"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <input type="text" name="lastName" placeholder="Last name"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <select name="addressType" required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
-                                <option value="" disabled selected>Select Address Type</option>
-                                <option value="home">Home</option>
-                                <option value="work">Work</option>
-                            </select>
-                            <div class="flex gap-4">
-                                <input type="text" name="city" placeholder="City/District/Town"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <input type="text" name="state" placeholder="State"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <input type="text" name="street" placeholder="Street"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <div class="flex gap-4">
-                                <input type="text" name="phone" placeholder="Phone number"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <input type="text" name="zip" placeholder="Pincode"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div class="flex justify-between mt-4">
-                                <button type="button" id="cancelAddBtn"
-                                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded">Cancel</button>
-                                <button type="submit" id="saveAddBtn"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Save
-                                    Address</button>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Edit Address Modal -->
-            <div id="editAddressModal"
-                class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
-                <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-                    <div class="mt-3">
-                        <h3 class="text-lg font-medium mb-4">Edit Delivery Address</h3>
-                        <form id="editAddressForm" class="space-y-4">
-                            <div class="flex gap-4">
-                                <span id="userId" hidden>
-                                    <%= user.id %>
-                                </span>
-                                <span id="addressId" hidden>
-                                    <%= address._id %>
-                                </span>
-                                <input type="text" value="<%= address.firstName %>" name="firstName"
-                                    placeholder="First name"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <input type="text" value="<%= address.lastName %>" name="lastName"
-                                    placeholder="Last name"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <select name="addressType" required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
-                                <option value="" disabled>Select Address Type</option>
-                                <option value="home">Home</option>
-                                <option value="work">Work</option>
-                            </select>
-                            <div class="flex gap-4">
-                                <input type="text" value="<%= address.city %>" name="city"
-                                    placeholder="City/District/Town"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <input type="text" value="<%= address.state %>" name="state" placeholder="State"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <input type="text" value="<%= address.street %>" name="street" placeholder="Street"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <div class="flex gap-4">
-                                <input type="text" value="<%= address.phoneNumber %>" name="phone"
-                                    placeholder="Phone number"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <input type="text" value="<%= address[0]?.pincode || address?.pincode %>" name="zip" placeholder="Pincode"
-                                    class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div class="flex justify-between mt-4">
-                                <button type="button" id="cancelEditBtn"
-                                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded">Cancel</button>
-                                <button type="submit" id="saveEditBtn"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">Save
-                                    Address</button>
-                            </div>
-                        </form>
+        <!-- Footer -->
+        <%- include("../partials/user/footer.ejs") %>
 
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <%- include("../partials/user/footer.ejs") %>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', () => {
-                        const addAddressBtn = document.getElementById('addAddressBtn');
-                        const editAddressModal = document.getElementById('editAddressModal');
-                        const addAddressModal = document.getElementById('addAddressModal');
-                        const cancelAddBtn = document.getElementById('cancelAddBtn');
-                        const cancelEditBtn = document.getElementById('cancelEditBtn');
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const addAddressBtn = document.getElementById('addAddressBtn');
+                    const editAddressModal = document.getElementById('editAddressModal');
+                    const addAddressModal = document.getElementById('addAddressModal');
+                    const cancelAddBtn = document.getElementById('cancelAddBtn');
+                    const cancelEditBtn = document.getElementById('cancelEditBtn');
 
 
-                        addAddressBtn?.addEventListener('click', () => {
-                            addAddressModal.classList.remove('hidden');
-                        });
+                    addAddressBtn?.addEventListener('click', () => {
+                        addAddressModal.classList.remove('hidden');
+                    });
 
 
-                        document.querySelectorAll("#editAddressBtn").forEach(button => {
-                            button.addEventListener("click", () => {
-                                editAddressModal.classList.remove("hidden");
-                            });
-                        });
-
-
-                        cancelAddBtn?.addEventListener("click", () => {
-                            addAddressModal.classList.add("hidden");
-                        });
-
-                        cancelEditBtn?.addEventListener("click", () => {
-                            console.log("Cancel Edit button clicked!");
-                            editAddressModal.classList.add("hidden");
-                        });
-
-
-                        window.addEventListener('click', (e) => {
-                            if (e.target === addAddressModal) addAddressModal.classList.add('hidden');
-                            if (e.target === editAddressModal) editAddressModal.classList.add('hidden');
+                    document.querySelectorAll("#editAddressBtn").forEach(button => {
+                        button.addEventListener("click", () => {
+                            editAddressModal.classList.remove("hidden");
                         });
                     });
 
-                </script>
+
+                    cancelAddBtn?.addEventListener("click", () => {
+                        addAddressModal.classList.add("hidden");
+                    });
+
+                    cancelEditBtn?.addEventListener("click", () => {
+                        console.log("Cancel Edit button clicked!");
+                        editAddressModal.classList.add("hidden");
+                    });
+
+
+                    window.addEventListener('click', (e) => {
+                        if (e.target === addAddressModal) addAddressModal.classList.add('hidden');
+                        if (e.target === editAddressModal) editAddressModal.classList.add('hidden');
+                    });
+                });
+
+            </script>
 </body>
 
 </html>

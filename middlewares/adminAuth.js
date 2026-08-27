@@ -13,12 +13,16 @@ import jwt from "jsonwebtoken"
         if(!decodeToken){
             return res.status(403).json({success:false, message:"Access denied : Admin"})
         }
-        
-        if(decodeToken.role === 'admin'){
-            req.admin = decodeToken
+
+        // A valid token that isn't an admin's (e.g. a regular logged-in user) previously fell
+        // through to next() anyway — req.admin was just left undefined, but nothing downstream
+        // ever checked it, so every admin route (product/category/order/coupon management,
+        // user blocking, sales reports, ...) was reachable by any authenticated user.
+        if(decodeToken.role !== 'admin'){
+            return res.status(403).json({success:false, message:"Access denied : Admin only"})
         }
-        
-        console.log(req.admin)
+
+        req.admin = decodeToken
         next()
 
     } catch (error) {

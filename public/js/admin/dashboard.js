@@ -1,5 +1,5 @@
 // Chart instances
-let salesChart, doughnutChart, salesOverviewChart;
+let doughnutChart, salesOverviewChart;
 
 // Chart data storage
 const chartData = {
@@ -11,7 +11,6 @@ const chartData = {
 
 // DOM elements
 const elements = {
-    downloadReportDropdown: document.getElementById('downloadReportDropdown'),
     filterSelect: document.getElementById('filterSelect'),
     filterForm: document.getElementById('filterForm'),
     startDateDiv: document.getElementById('startDateDiv'),
@@ -28,29 +27,6 @@ const elements = {
 };
 // Debug the elements object to check for null
 console.log('Elements at initialization:', elements);
-
-// Toggle dropdown menu using event delegation
-document.addEventListener('click', (e) => {
-    const dropdown = document.getElementById('downloadReportDropdown');
-    if (e.target.id === 'downloadReportDropdown' && dropdown && dropdown.nextElementSibling) {
-        e.stopPropagation();
-        const dropdownMenu = dropdown.nextElementSibling;
-        dropdownMenu.classList.toggle('hidden');
-        console.log('Dropdown toggled:', dropdownMenu);
-    }
-});
-
-// Close dropdown on outside click
-document.addEventListener('click', (event) => {
-    const dropdown = document.getElementById('downloadReportDropdown');
-    if (dropdown && dropdown.nextElementSibling) {
-        const dropdownMenu = dropdown.nextElementSibling;
-        if (!dropdown.contains(event.target)) {
-            dropdownMenu.classList.add('hidden');
-            console.log('Dropdown closed:', dropdownMenu);
-        }
-    }
-});
 
 // Toggle custom date inputs
 elements.filterSelect.addEventListener('change', () => {
@@ -149,7 +125,6 @@ function updateChartData(data) {
 
 // Update all charts
 function updateCharts() {
-    updateChart(salesChart, chartData.salesLabels, chartData.salesData);
     updateChart(doughnutChart, chartData.categoryLabels, chartData.categoryData);
     updateChart(salesOverviewChart, chartData.salesLabels, chartData.salesData);
 }
@@ -194,7 +169,6 @@ function updateSummaryCards(data) {
 
 // Initialize all charts
 function initializeCharts() {
-    // salesChart = createBarChart('myChart', chartData.salesLabels, chartData.salesData);
     doughnutChart = createDoughnutChart('myDoughnutChart', chartData.categoryLabels, chartData.categoryData);
     salesOverviewChart = createLineChart('salesOverview', chartData.salesLabels, chartData.salesData);
 }

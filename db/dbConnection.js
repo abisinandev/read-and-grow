@@ -1,14 +1,11 @@
 import mongoose from "mongoose"
-import express from "express"
 import dotenv from "dotenv"
+import { CONFIG } from "../utils/constants/envConfig.js"
 dotenv.config()
-
-const localDB = process.env.DB_CONNECTION // db connection link from .env
-// console.log(localDB)
 
 const connectDb = async () => {
     try {
-        await mongoose.connect(localDB)
+        await mongoose.connect(CONFIG.MONGO_URI)
         console.log(`MONGODB DATABASE CONNECTED..`)
     } catch (error) {
         console.error(`Database connection failed : ${error.message}`)
@@ -16,4 +13,3 @@ const connectDb = async () => {
 }
 
 export default connectDb
-

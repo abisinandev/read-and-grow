@@ -35,20 +35,27 @@ export const updateDashboard = async (req, res, next) => {
 
         const filterDate = dateFilter(filter, startDate, endDate);//FILTER DATES
 
-        //TAKEING ALL DATA ACCORDING TO FILTER DATA
-        const topProduct = await getTopProducts(filterDate);
-        const totalSales = await getTotalSales(filterDate);
-        const countProducts = await getTotalProductsSold(filterDate);
-        const totalCoupons = await getActiveCouponsCount();
-        const deliveredOrdersCount = await getDeliveredOrdersCount(filterDate);
-        const dailySales = await getDailySales(filterDate);
-        const categoryBasedSales = await getCategoryBasedSales(filterDate);
-        const topSellingBooks = await getTopSelledItems(filterDate)
+        const [
+            totalSales,
+            countProducts,
+            totalCoupons,
+            deliveredOrdersCount,
+            dailySales,
+            categoryBasedSales,
+            topSellingBooks
+        ] = await Promise.all([
+            getTotalSales(filterDate),
+            getTotalProductsSold(filterDate),
+            getActiveCouponsCount(),
+            getDeliveredOrdersCount(filterDate),
+            getDailySales(filterDate),
+            getCategoryBasedSales(filterDate),
+            getTopSelledItems(filterDate)
+        ]);
 
         return res.json({
             dailySales,
             categoryBasedSales,
-            topProduct,
             totalSales,
             countProducts,
             totalCoupons,
@@ -98,31 +105,6 @@ const dateFilter = (filter, startDate, endDate) => {
     }
 };
 
-const getTopProducts = async (dateFilter) => {
-    return Order.aggregate([
-        { $match: dateFilter },//MATCH FILTER DATE
-        { $unwind: "$items" },//TAKE EACH ITEMS SEPERATELY
-        { $match: { "items.status": "Delivered" } },//MATCH DELIVERED ITEMS
-        {
-            $group: {
-                _id: "$items.productId",
-                quantity: { $sum: "$items.quantity" },
-                totalSales: { $sum: { $multiply: ["$items.quantity", "$items.price"] } }//FIND SALES PRICE 
-            }
-        },
-        {
-            //LOOKUP PRODUCT DETAILS
-            $lookup: {
-                from: "products",
-                localField: "_id",
-                foreignField: "_id",
-                as: "productDetails"
-            }
-        },
-        { $sort: { totalSales: -1 } }//SORT WITH ASCENDING
-    ]);
-};
-
 const getTotalSales = async (dateFilter) => {
     //ALL DELIVERED PRODUCTS PRICES
     return Order.aggregate([
@@ -170,13 +152,7 @@ const getActiveCouponsCount = async () => {
 };
 
 const getDeliveredOrdersCount = async (dateFilter) => {
-    //FIND DELIVERED ORDER COUNTS
-    return Order.aggregate([
-        { $match: dateFilter },
-        { $unwind: "$items" },
-        { $match: { "items.status": "Delivered" } },
-        { $group: { _id: null, count: { $sum: 1 } } }
-    ]).then(result => result[0]?.count || 0);
+    return Order.countDocuments({ ...dateFilter, "items.status": "Delivered" });
 };
 
 const getDailySales = async (dateFilter) => {
@@ -200,35 +176,44 @@ const getDailySales = async (dateFilter) => {
 };
 
 const getCategoryBasedSales = async (dateFilter) => {
-    const allOrders = await Order.aggregate([
+    return Order.aggregate([
         { $match: dateFilter },
         { $unwind: "$items" },
-        { $match: { "items.status": "Delivered" } }
-    ]);
-    const products = await Product.find();
-    const categoryBasedSales = {};
-
-    for (const product of products) {
-        for (const order of allOrders) {
-            if (order.items.productId.toString() === product._id.toString()) {
-                categoryBasedSales[product.category] = (categoryBasedSales[product.category] || 0) + 1;
+        { $match: { "items.status": "Delivered" } },
+        {
+            $lookup: {
+                from: "products",
+                localField: "items.productId",
+                foreignField: "_id",
+                as: "product"
+            }
+        },
+        { $unwind: "$product" },
+        {
+            $group: {
+                _id: "$product.category",
+                totalQuantity: { $sum: "$items.quantity" }
             }
         }
-    }
-    return categoryBasedSales;
+    ]).then(rows =>
+        rows.reduce((acc, row) => {
+            acc[row._id] = row.totalQuantity;
+            return acc;
+        }, {})
+    );
 };
 
 const getTopSelledItems = async (dataFilter) => {
     const allOrders = await Order.aggregate([
-        {$match:dataFilter},
-        {$unwind:"$items"},
-        {$group:{_id:"$items.productId",totalQty:{$sum:"$items.quantity"}}},
-        {$sort:{"totalQty":-1}},
-        {$limit:3},
+        { $match: dataFilter },
+        { $unwind: "$items" },
+        { $group: { _id: "$items.productId", totalQty: { $sum: "$items.quantity" } } },
+        { $sort: { "totalQty": -1 } },
+        { $limit: 3 },
     ])
 
     const topProducts = []
-    for(let order of allOrders){
+    for (let order of allOrders) {
         const products = await Product.findById(order._id)
         topProducts.push(products)
     }
@@ -238,8 +223,7 @@ const getTopSelledItems = async (dataFilter) => {
 
 
 
- 
 
 
 
- 
+

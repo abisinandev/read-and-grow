@@ -11,20 +11,11 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <style>
-        @media (max-width: 768px) {
-            #sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-            }
-            .main-content {
-                margin-left: 0 !important;
-                padding: 1rem;
-            }
-            .table-container {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
+        /* Unconditional: gating this to mobile only let the table escape its container and
+           scroll the whole <body> horizontally at desktop widths instead. */
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         * {
             -webkit-font-smoothing: antialiased;
@@ -44,13 +35,13 @@
 
 <body class="bg-gray-50 text-gray-800 font-sans">
     <div class="container-fluid">
-        
+
         <!-- Sidebar -->
         <%- include("../partials/admin/adminSideBar.ejs") %>
 
         <!-- Main Content -->
-        <div class="flex-1 main-content p-6" style="margin-left: calc(0% + 0px);">
-            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6">
+        <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 min-w-0">
+            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6 rounded-xl">
                 <div class="flex justify-between items-center px-6 py-4">
                     <h1 class="text-2xl font-semibold text-gray-800">Category Management</h1>
                 </div>
