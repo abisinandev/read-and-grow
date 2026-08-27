@@ -18,7 +18,7 @@ import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
 import methodOverride from "method-override"
 
-dotenv.config()//ENV FILE CONFIGURATION
+import { CONFIG } from "./utils/constants/envConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,12 +36,12 @@ app.use(methodOverride('_method'))
 
 //STORE SESSION IN DB FOR PERSISTENCE
 app.use(session({
-    secret: process.env.SESSION_SCERET,
+    secret: CONFIG.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
     cookie: { secure: false },
     store: MongoStore.create({
-        mongoUrl: process.env.DB_CONNECTION, // MongoDB URL
+        mongoUrl: CONFIG.MONGO_URI, // MongoDB URL
         collectionName: 'sessions', // Collection where sessions will be stored
         ttl: 1 * 60 * 60 // Session expiration time in seconds (14 days)
     }),
@@ -65,9 +65,18 @@ app.use((err, req, res, next) => {
     const message = err.message || "Internal Server error";
     console.error(`Error: ${message}, statusCode :${statusCode}`);
 
-    return res.status(statusCode).json({
+    if (err.isOperational) {
+        return res.status(statusCode).json({
+            success: false,
+            message: message,
+            field: err.field || null
+        });
+    }
+
+    //UNEXPECTED ERRORS CATHING
+    return res.status(500).json({
         success: false,
-        message: "Something went wrong"
+        message: "Something went wrong. Please try again"
     });
 });
 

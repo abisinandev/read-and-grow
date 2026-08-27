@@ -5,15 +5,16 @@ import jwt from "jsonwebtoken"
 import OTP from "../../models/otpSchema.js"
 import { sendOTP } from "../otpController.js"
 import AppError from "../../utils/errorHandler.js"
-import { appengine } from "googleapis/build/src/apis/appengine/index.js"
 import Product from "../../models/productSchema.js"
 import nodemailer from "nodemailer"
 import Category from "../../models/categorySchema.js"
 import Address from "../../models/addressSchema.js"
 import Cart from "../../models/cartSchema.js"
 import Wishlist from "../../models/wishListSchema.js"
-import { status } from "init"
 import Order from "../../models/orderSchema.js"
+import { CONFIG } from "../../utils/constants/envConfig.js"
+import { AUTH_ERRORS, PROFILE_ERRORS, GENERAL_ERRORS } from "../../utils/constants/errorMessages.js"
+import { STATUS } from "../../utils/constants/statusCodes.js"
 
 
 export const renderSignPage = async (req, res, next) => {
@@ -41,16 +42,16 @@ export const handleSignupPage = async (req, res, next) => {
         console.log(referralCode)
 
         if (password !== confirmPassword) {
-            return res.status(400).json({ success: false, message: "Passwords do not match" })
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.PASSWORDS_DO_NOT_MATCH, field: 'confirmPassword' })
         }
         
         let StrongPassword = password; // Passwords already match, so we can use it
 
         //VALIDATION
         if (!username || !email || !phoneNumber || !password || !confirmPassword) {
-            return res.status(400).json({
+            return res.status(STATUS.BAD_REQUEST).json({
                 success: false,
-                message: "All Fields are required"
+                message: AUTH_ERRORS.ALL_FIELDS_REQUIRED
             })
         }
 
@@ -66,25 +67,13 @@ export const handleSignupPage = async (req, res, next) => {
         if (userExist) {
             if (userExist.username == username) {
                 console.log(username)
-                return res.status(400).json({
-                    success: false,
-                    message: "Username is already exits"
-                })
+                return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.USERNAME_TAKEN, field: 'username' })
             }
-
             if (userExist.email == email) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Email is already exist"
-                })
+                return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.EMAIL_TAKEN, field: 'email' })
             }
-
             if (userExist.phoneNumber == phoneNumber) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Phone number already exist"
-                })
-
+                return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.PHONE_TAKEN, field: 'phoneNumber' })
             }
         }
 
@@ -107,7 +96,7 @@ export const handleSignupPage = async (req, res, next) => {
             phoneNumber,
             referralCode
         }
-        const token = jwt.sign({ email: email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES })
+        const token = jwt.sign({ email: email }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES })
 
         // console.log('sign up Temp session :', req.session.temp, token)
         return res.status(200).json({
@@ -156,37 +145,37 @@ export const handleLoginPage = async (req, res, next) => {
 
 
         if (!isUser) {
-            return res.status(400).json({ success: false, message: "User not found!" })
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.USER_NOT_FOUND })
         }
         console.log("isUser : ", isUser)
 
         //IGNORE IF USER IS ADMIN
         if (isUser.role === 'admin') {
-            return res.status(400).json({ success: false, message: "User is not exist" })
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.ADMIN_LOGIN_DENIED })
         }
 
         //COMPARE PASSWORD FROM DB
         const comparePassword = await bcrypt.compare(password, isUser.password)
 
         if (!comparePassword) {
-            return res.status(400).json({ success: false, message: "Incorrect password" })
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.INCORRECT_PASSWORD, field: 'password' })
         }
 
         //IGNORE BLOCKED USERS
         if (isUser.isBlocked == true) {
-            return res.status(400).json({
+            return res.status(STATUS.BAD_REQUEST).json({
                 success: false,
-                message: "User is not avaible"
+                message: AUTH_ERRORS.USER_BLOCKED
             })
         }
 
         //GENERATING JWT TOKEN
-        const token = jwt.sign({ id: isUser._id, username: isUser.username, role: isUser.role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES })
+        const token = jwt.sign({ id: isUser._id, username: isUser.username, role: isUser.role }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES })
         //STORE JWT IN COOKIES
         res.cookie('jwt', token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 })
 
         // req.session.user = isUser
-        return res.status(200).json({
+        return res.status(STATUS.OK).json({
             success: true,
             message: "successfully logged",
             redirect: "/"
@@ -313,14 +302,10 @@ export const resetPassword = async (req, res, next) => {
 
 export const renderProfilePage = async (req, res, next) => {
     try {
-        const token = req.user 
         console.log("req.user :",req.user)
-        const user = await User.findById(req.user.id) || await User.findById(req.user._id)
+        const user = await User.findById(req.user.id)
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User detailes not found"
-            })
+            return res.status(STATUS.NOT_FOUND).json({ success: false, message: PROFILE_ERRORS.USER_NOT_FOUND })
         }
 
         return res.render("user/profile", { user })
@@ -334,6 +319,23 @@ export const editProfile = async (req, res, next) => {
         const { username, phoneNumber } = req.body
         const user = req.user
         console.log(req.body)
+
+        //VALIDATION
+        if (!username || !phoneNumber) {
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: PROFILE_ERRORS.USERNAME_PHONE_REQUIRED })
+        }
+
+        //CHECK DUPLICATE USERNAME OR PHONE FOR OTHER USERS
+        const isDuplicate = await User.findOne({
+            _id: { $ne: user.id },
+            $or: [{ username }, { phoneNumber }]
+        })
+        if (isDuplicate) {
+            if (isDuplicate.username === username) {
+                return res.status(STATUS.BAD_REQUEST).json({ success: false, message: PROFILE_ERRORS.USERNAME_TAKEN, field: 'username' })
+            }
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: PROFILE_ERRORS.PHONE_TAKEN, field: 'phoneNumber' })
+        }
 
         await User.findByIdAndUpdate(
             user.id,
@@ -370,18 +372,23 @@ export const changePasswordRequest = async (req, res, next) => {
         const data = req.user
         const user = await User.findOne({ _id: data.id })
 
+        //GOOGLE AUTH USERS DON'T HAVE A PASSWORD
+        if (!user.password) {
+            return res.status(STATUS.BAD_REQUEST).json({
+                success: false,
+                message: AUTH_ERRORS.GOOGLE_NO_PASSWORD
+            })
+        }
+
         //BCRYPT COMPPARE OLD PASSWORD WITH NEW PASSWORD
         const comparePassword = await bcrypt.compare(oldPassword, user.password)
 
         if (!comparePassword) {
-            return res.status(400).json({
-                success: false,
-                message: "Old password is not matching"
-            })
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.OLD_PASSWORD_MISMATCH, field: 'oldPassword' })
         }
 
         if (newPassword !== confirmPassword) {
-            return res.status(400).json({ success: false, message: "confirm password is not matching" })
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.CONFIRM_PASSWORD_MISMATCH, field: 'confirmPassword' })
         }
 
         //IF MATCH ? GENERATE SALT
@@ -409,13 +416,14 @@ export const renderChangeEmail = async (req, res, next) => {
         const id = req.params
         const user = await User.findById(id.id)//FIND USER
 
+        //IF USER NOT FOUND REDIRECT BACK TO PROFILE
+        if (!user) {
+            return res.redirect(`/profile/${id.id}`)
+        }
+
         //SET EMAIL TO SESSION 
         req.session.update = user.email
-        if (req.session.update) {
-            return res.render("user/editEmail", { id })
-        } else {
-            return res.redirect(`/profile/${id}`)
-        }
+        return res.render("user/editEmail", { id })
 
     } catch (error) {
         next(new AppError(`Change email : ${error}`, 500))
@@ -433,13 +441,10 @@ export const changeEmailRequest = async (req, res, next) => {
 
         // CHECK  EMAIL MATCHING 
         if (isExist.email !== email) {
-            return res.status(400).json({
-                success: false,
-                message: "Email is not valid"
-            })
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.EMAIL_NOT_VALID, field: 'email' })
         }
 
-        const baseUrl = process.env.BASE_URL
+        const baseUrl = CONFIG.BASE_URL
         //RESET URL IN A VARIBLE
         const resetURL = `${baseUrl}/new-email/${id.id}`;
 
@@ -447,19 +452,19 @@ export const changeEmailRequest = async (req, res, next) => {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: process.env.MAIL_USER,
-                pass: process.env.MAIL_PASS
+                user: CONFIG.MAIL_USER,
+                pass: CONFIG.MAIL_PASS
             },
         });
         // console.log(transporter)
         const mailOptions = {
             to: email,
-            from: process.env.MAIL_USER,
-            subject: 'UPDATE EMAILID',
-            text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
+            from: CONFIG.MAIL_USER,
+            subject: 'Update Email Address - Read & Grow',
+            text: `You are receiving this because you requested to update your email address.\n\n
             Please click on the following link, or paste this into your browser to complete the process:\n\n
             ${resetURL}\n\n
-            If you did not request this, please ignore this email and your password will remain unchanged.\n,
+            If you did not request this, please ignore this email and your account will remain unchanged.\n
             `,
         };
 
@@ -495,10 +500,7 @@ export const updateNewMail = async (req, res, next) => {
         const isExists = await User.findOne({ email: email })
         //CHECK ALREADY AVAILABLE
         if (isExists) {
-            return res.status(400).json({
-                success: false,
-                message: "This email is alreeady in use. Please choose another."
-            })
+            return res.status(STATUS.BAD_REQUEST).json({ success: false, message: AUTH_ERRORS.EMAIL_ALREADY_IN_USE, field: 'email' })
         }
 
         const otpResult = await sendOTP(email)//PASS EMAIL TO SEND OTP FUNCTION
@@ -517,7 +519,7 @@ export const updateNewMail = async (req, res, next) => {
         })
 
     } catch (error) {
-        next(new AppError(`updateNew Mail : ${id}`))
+        next(new AppError(`updateNew Mail : ${email}`, 500))
     }
 }
 
@@ -585,7 +587,8 @@ export const addAddress = async (req, res, next) => {
 
         return res.status(200).json({
             success: true,
-            message: "Address added successfully."
+            message: "Address added successfully.",
+            address: newAddress
         })
 
     } catch (error) {

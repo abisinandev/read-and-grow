@@ -38,9 +38,9 @@ async function addToWishlist(button, data) {
             icon.classList.toggle('text-gray-600');
         }
 
-        setTimeout(() => {
-            location.reload()
-        }, 1000);
+        // setTimeout(() => {
+        //     location.reload()
+        // }, 1000);
     } catch (error) {
         console.log('Add to Wishlist ', error.message)
         showToast(error.message || 'Something went wrong', 'error')
@@ -64,9 +64,31 @@ async function removeWishlist(data) {
         }
 
         showToast(result.message || 'Product removed from wishlist', 'success')
-        setTimeout(() => {
-            location.reload()
-        }, 1000);
+        // Remove card from DOM if on wishlist page
+        const wishlistCard = document.getElementById(`wishlist-card-${data}`);
+        if (wishlistCard) {
+            wishlistCard.style.transition = 'opacity 0.3s, transform 0.3s';
+            wishlistCard.style.opacity = '0';
+            wishlistCard.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                wishlistCard.remove();
+                // Check if empty
+                if (document.querySelectorAll('.wishlist-card').length === 0) {
+                    location.reload();
+                }
+            }, 300);
+        } else {
+            // If on shop page, toggle icon back
+            const wishlistBtn = document.querySelector(`button[onclick="removeWishlist('${data}')"]`);
+            if (wishlistBtn) {
+                wishlistBtn.setAttribute('onclick', `addToWishlist(this, '${data}')`);
+                const icon = wishlistBtn.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fas', 'text-red-500');
+                    icon.classList.add('far', 'text-gray-600');
+                }
+            }
+        }
     } catch (error) {
         console.log('Remove from Wishlist ', error.message)
         showToast(error.message || 'Something went wrong', 'error')
@@ -100,9 +122,9 @@ async function addToCart(productId) {
         if (result.success) {
             showToast(result.message, 'success');
 
-            setTimeout(() => {
-                location.reload()
-            }, 1200);
+            // setTimeout(() => {
+            //     location.reload()
+            // }, 1200);
         }
 
     } catch (error) {

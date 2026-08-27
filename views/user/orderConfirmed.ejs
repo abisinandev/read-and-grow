@@ -4,70 +4,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Confirmation - REad & GroW</title>
+  <title>Order Confirmed - REad & GroW</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes scaleIn {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes checkDraw {
+      0%   { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes fadeUp {
+      0%   { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .circle-anim { animation: scaleIn 0.5s cubic-bezier(0.4,0,0.2,1) forwards; }
+    .check-anim  {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: checkDraw 0.55s ease 0.4s forwards;
+    }
+    .fade-1 { opacity:0; animation: fadeUp 0.45s ease 0.65s forwards; }
+    .fade-2 { opacity:0; animation: fadeUp 0.45s ease 0.8s forwards; }
+    .fade-3 { opacity:0; animation: fadeUp 0.45s ease 0.95s forwards; }
+    .fade-4 { opacity:0; animation: fadeUp 0.45s ease 1.1s forwards; }
+    .fade-5 { opacity:0; animation: fadeUp 0.45s ease 1.25s forwards; }
+  </style>
 </head>
 
-<body class="bg-gray-200   min-h-screen flex items-center justify-center py-10">
-  <div class="bg-white p-8 rounded-xl shadow-lg  w-full max-w-2xl mx-4 border-blue-600">
-    <!-- Header with Celebration Icon -->
-    <div class="text-center mb-8">
-      <div class="flex justify-center mb-4">
-        <div class="text-green-500 text-6xl animate-bounce">
-          <i class="fas fa-check-circle"></i>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+  <%- include("../partials/user/navBar.ejs") %>
+
+  <main class="flex-1 flex items-center justify-center px-4 py-12">
+    <div class="bg-white rounded-2xl shadow-lg w-full max-w-lg p-8 text-center">
+
+      <!-- Animated checkmark -->
+      <div class="flex justify-center mb-6 circle-anim">
+        <div class="w-24 h-24 rounded-full bg-green-50 flex items-center justify-center">
+          <svg class="w-16 h-16" viewBox="0 0 52 52" fill="none">
+            <circle cx="26" cy="26" r="25" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+            <polyline class="check-anim"
+              points="14,27 22,35 38,18"
+              stroke="#16a34a" stroke-width="4"
+              stroke-linecap="round" stroke-linejoin="round"
+              fill="none"/>
+          </svg>
         </div>
       </div>
-      <h1 class="text-3xl font-bold text-gray-800">Order Confirmed!</h1>
-      <p class="text-gray-600 mt-2">Thank you for shopping with <span class="font-semibold">REad & GroW</span></p>
-    </div>
 
-    <!-- Estimated Delivery (New Section) -->
-    <div class="bg-blue-50 p-4 rounded-lg mb-6">
-      <div class="flex items-center">
-        <i class="fas fa-shipping-fast text-blue-600 mr-3"></i>
-        <div>
-          <h3 class="font-medium text-blue-800">Estimated Delivery</h3>
-          <p class="text-sm text-blue-600">
-            <% new Date(orders.createdAt).toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'long',  // Example: "January", "February"
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true   // 12-hour format (AM/PM)
-            })  %>
+      <h1 class="fade-1 text-2xl font-bold text-gray-900 mb-1">Order Confirmed! 🎉</h1>
+      <p class="fade-2 text-gray-500 text-sm mb-6">
+        Thank you for shopping with <span class="font-semibold text-gray-700">REad &amp; GroW</span>.
+        Your order has been placed successfully.
+      </p>
+
+      <!-- Order info -->
+      <div class="fade-3 bg-gray-50 rounded-xl p-5 mb-5 text-left space-y-3 border border-gray-100">
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500 font-medium">Order ID</span>
+          <span class="text-gray-900 font-semibold">#<%= orders.orderId %></span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500 font-medium">Payment</span>
+          <span class="text-gray-900 font-semibold"><%= orders.payment %></span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500 font-medium">Payment Status</span>
+          <span class="font-semibold
+            <%= orders.paymentStatus === 'paid' ? 'text-green-600' :
+               orders.paymentStatus === 'failed' ? 'text-red-600' : 'text-yellow-600' %>">
+            <%= orders.paymentStatus %>
+          </span>
+        </div>
+        <div class="flex justify-between text-sm border-t border-gray-200 pt-3">
+          <span class="text-gray-500 font-medium">Total</span>
+          <span class="text-gray-900 font-bold text-base">Rs. <%= orders.totalAmount?.toFixed(2) %></span>
+        </div>
+      </div>
+
+      <!-- Delivery address -->
+      <% if (deliveryAddress) { %>
+      <div class="fade-4 bg-blue-50 rounded-xl p-4 mb-6 text-left border border-blue-100">
+        <p class="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">
+          <i class="fas fa-map-marker-alt mr-1"></i> Delivering to
         </p>
-        
+        <p class="font-semibold text-gray-900 text-sm"><%= deliveryAddress.firstName %> <%= deliveryAddress.lastName %></p>
+        <p class="text-gray-600 text-xs mt-0.5">
+          <%= deliveryAddress.street %>, <%= deliveryAddress.city %>, <%= deliveryAddress.state %> — <%= deliveryAddress.pincode %>
+        </p>
+        <p class="text-gray-400 text-xs mt-1">📞 <%= deliveryAddress.phoneNumber %></p>
+      </div>
+      <% } %>
+
+      <!-- Estimated delivery banner -->
+      <div class="fade-4 bg-amber-50 border border-amber-100 rounded-xl p-3 mb-6 flex items-center gap-3 text-left">
+        <i class="fas fa-shipping-fast text-amber-500 text-lg shrink-0"></i>
+        <div>
+          <p class="text-sm font-semibold text-amber-800">Estimated Delivery</p>
+          <p class="text-xs text-amber-600">3-5 business days from order date</p>
         </div>
       </div>
-    </div>
 
-    <!-- Wishes -->
-    <div class="text-center mb-8">
-      <p class="text-lg font-medium text-gray-700">
-        Happy Reading! 📚
-      </p>
-      <p class="text-gray-600 mt-1">
-        We hope these books bring you joy and inspiration. Thank you for choosing us!
-      </p>
-    </div>
+      <!-- Buttons -->
+      <div class="fade-5 flex flex-col sm:flex-row gap-3">
+        <button onclick="window.location.href='/orders'"
+          class="flex-1 bg-black text-white py-3 px-6 rounded-xl font-medium text-sm hover:bg-gray-800 transition flex items-center justify-center gap-2">
+          <i class="fas fa-box text-xs"></i> View Orders
+        </button>
+        <button onclick="window.location.href='/shop'"
+          class="flex-1 bg-gray-100 text-gray-800 py-3 px-6 rounded-xl font-medium text-sm hover:bg-gray-200 transition flex items-center justify-center gap-2">
+          <i class="fas fa-shopping-bag text-xs"></i> Continue Shopping
+        </button>
+      </div>
 
-    <!-- Buttons - Continue Shopping & Track Order -->
-    <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
-      <button onclick="window.location.href='/shop'"
-        class="bg-black hover:bg-gray-600 text-white font-medium py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
-        <i class="fas fa-shopping-bag mr-2"></i> Continue Shopping
-      </button>
-      <button onclick="window.location.href='/orders'"
-        class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
-        <i class="fas fa-box mr-2"></i> Order details
-      </button>
+      <p class="text-xs text-gray-400 mt-5">Happy Reading! 📚 We hope these books bring you joy and inspiration.</p>
     </div>
-
- 
-  </div>
+  </main>
 </body>
 
 </html>

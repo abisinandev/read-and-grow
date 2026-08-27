@@ -42,7 +42,10 @@ const orderSchema = new Schema({
     shippingCharge: { type: Number, default: 99 },
     discount: { type: Number },
     totalAmount: { type: Number, required: true },
-    paymentStatus: { type: String, default: false },
+    // Was `default: false` — a boolean default on a String field. Mongoose casts it to the
+    // literal string "false" whenever paymentStatus isn't explicitly set, which is never a
+    // meaningful status value anywhere else in the app (paid/pending/failed/Refunded).
+    paymentStatus: { type: String, default: "pending" },
     reason: { type: String, default: null },
     updatedAt: { type: Date, default: Date.now },
     isCouponAvailable: { type: Boolean, default: false },

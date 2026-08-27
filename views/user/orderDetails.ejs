@@ -17,6 +17,17 @@
   <%- include("../partials/user/navBar.ejs") %>
 
     <div class="container mx-auto px-6 py-10">
+      <!-- Breadcrumb -->
+      <nav class="text-gray-500 text-sm mb-6">
+        <ol class="flex space-x-2">
+          <li><a href="/" class="hover:text-gray-900 transition">Home</a></li>
+          <li><span class="text-gray-400">/</span></li>
+          <li><a href="/orders" class="hover:text-gray-900 transition">My Orders</a></li>
+          <li><span class="text-gray-400">/</span></li>
+          <li class="text-gray-900 font-medium">Order Details</li>
+        </ol>
+      </nav>
+
       <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Order Details</h1>
         <a href="/orders"
@@ -31,57 +42,75 @@
           <h2 class="text-xl font-semibold text-gray-900 mb-5 border-b border-gray-200 pb-3">Order Summary</h2>
           <div class="space-y-4 text-gray-700">
             <div class="flex justify-between items-center">
-              <span class="font-medium text-gray-800">Order Number:</span>
+              <span class="font-medium text-gray-800">Order Number</span>
               <span class="text-gray-900 font-semibold" data-attribute-id="<%= order._id %>">#<%= order.orderId %>
               </span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="font-medium text-gray-800">Order Date:</span>
-              <button  class=" text-gray-900">
+              <span class="font-medium text-gray-800">Order Date</span>
+              <button class=" text-gray-900">
                 <%= new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric' , month: 'long' ,
                   day: 'numeric' }) %>
               </button>
             </div>
             <div class="flex justify-between items-center">
-              <span class="font-medium text-gray-800">Subtotal :</span>
-              <span class="text-gray-900 font-semibold"><%= order.subTotal %></span>
+              <span class="font-medium text-gray-800">Subtotal</span>
+              <span class="text-gray-900 font-semibold">
+                <%= order.subTotal %>
+              </span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="font-medium text-gray-800">Payment status:</span>
-              <span class="<% 
-              if (order.paymentStatus === 'failed') { %> text-red-600 font-semibold <% } 
-              else if (order.paymentStatus === 'Refunded') { %> text-yellow-600 font-semibold <% } 
-              else if (order.paymentStatus === 'paid') { %> text-green-600 font-semibold <% } 
-              else if (order.paymentStatus === 'pending') { %> text-yellow-600 font-semibold <% } 
-              else { %> text-gray-900 font-semibold <% } 
+              <span class="font-medium text-gray-800">Payment status</span>
+              <span id="paymentStatusBadge" class="<%
+              if (order.paymentStatus === 'failed') { %> text-red-600 font-semibold <% }
+              else if (order.paymentStatus === 'Refunded') { %> text-yellow-600 font-semibold <% }
+              else if (order.paymentStatus === 'paid') { %> text-green-600 font-semibold <% }
+              else if (order.paymentStatus === 'pending') { %> text-yellow-600 font-semibold <% }
+              else { %> text-gray-900 font-semibold <% }
               %>">
-              <%= order.paymentStatus %>
+                <%= order.paymentStatus %>
               </span>
 
             </div>
             <div class="flex justify-between items-center">
-              <span class="font-medium text-gray-800">Shipping charge (Not be Refunded)</span>
-              <span class="text-gray-900 font-semibold"><%= order.shippingCharge %></span>
+              <span class="font-medium text-gray-800">Shipping charge</span>
+              <span class="text-gray-900 font-semibold">
+                <%= order.shippingCharge %>
+              </span>
             </div>
             <% if(order.discount){%>
               <div class="flex justify-between items-center">
                 <span class="font-medium text-gray-800">Discount</span>
                 <span class="text-gray-900 font-semibold">-<%= order.discount %></span>
               </div>
-            <% } %>
-            <% if (order.coupon) { %>
-              <div class="flex justify-between items-center">
-                <span class="font-medium text-gray-800">Applied coupon</span>
-                <span class="text-gray-900 font-semibold <%= order.isCouponAvailable ? '' : 'line-through' %>">
-                  -<%= order.coupon.discountValue %>
-                </span>
-              </div>
-            <% } %>
-            
-            <div class="flex justify-between items-center">
-              <span class="font-medium text-gray-800 ">Total Amount:</span>
-              <span style="font-size: 18px; font-weight: bold;">Rs. <span id="x"><%= (order?.totalAmount).toFixed(2) %></span></span>
-            </div>
+              <% } %>
+                <% if (order.coupon) { %>
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-800">Applied coupon</span>
+                    <span class="text-gray-900 font-semibold <%= order.isCouponAvailable ? '' : 'line-through' %>">
+                      -<%= order.coupon.discountValue %>
+                    </span>
+                  </div>
+                  <% } %>
+
+                    <%
+                      // order.totalAmount is decremented live as items get cancelled/returned —
+                      // that's correct and intentional (admin sales reports sum it as current
+                      // revenue), but it means a fully-refunded order nets to exactly 0, which
+                      // reads as a broken/blank price rather than "this was refunded". Since
+                      // subTotal/shippingCharge/discount/coupon are never mutated by
+                      // cancellation, the original charged amount is always reconstructable
+                      // from them for display purposes, without touching totalAmount itself.
+                      const allItemsSettled = orderedProducts.every(item => item.status === 'Cancelled' || item.status === 'Returned');
+                      const originalTotal = (order.subTotal || 0) + (order.shippingCharge || 0) - (order.discount || 0) - (order.coupon ? order.coupon.discountValue : 0);
+                    %>
+                    <div class="flex justify-between items-center" data-order-total-row>
+                      <span class="font-medium text-gray-800 ">Total Amount</span>
+                      <span style="font-size: 18px; font-weight: bold;">Rs. <span id="x"
+                          data-original-total="<%= originalTotal.toFixed(2) %>">
+                          <%= (allItemsSettled ? originalTotal : order?.totalAmount).toFixed(2) %>
+                        </span><% if (allItemsSettled) { %><span data-order-total-note class="text-xs font-normal text-gray-500 ml-1">(Refunded)</span><% } %></span>
+                    </div>
           </div>
         </div>
 
@@ -89,7 +118,7 @@
           <h2 class="text-xl font-semibold text-gray-900 mb-5 border-b border-gray-200 pb-3">Items</h2>
           <div class="space-y-4">
             <% orderedProducts.forEach(item=> { %>
-              <div
+              <div data-item-row data-product-id="<%= item.productId %>"
                 class="flex items-center justify-between p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition duration-200">
                 <div class="flex items-center space-x-5">
                   <div class="w-14 h-18 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -105,42 +134,33 @@
                     <p class="text-sm text-gray-600 font-medium">Rs. <%= item.price %>/per</p>
                     <div class="flex items-center space-x-2 mt-1">
                       <span class="text-sm font-medium text-gray-700">Status:</span>
-                      <span
+                      <span data-item-status-text
                         class="text-sm font-medium <%= item.status === 'Pending' ? 'text-yellow-500' : item.status === 'Shipped' ? 'text-blue-500' : item.status === 'Delivered' ? 'text-green-600' : 'text-red-600' %>">
                         <%= item.status %>
                       </span>
-                      <% if (item.status==='Pending' ) { %>
-                        <i class="fas fa-clock text-yellow-500"></i>
-                        <% } else if (item.status==='Shipped' ) { %>
-                          <i class="fas fa-truck text-blue-500"></i>
-                          <% } else if (item.status==='Delivered' ) { %>
-                            <i class="fas fa-check-circle text-green-600"></i>
-                            <% } else if (item.status==='Cancelled' || item.status==='Returned' ) { %>
-                              <i class="fas fa-times-circle text-red-600"></i>
-                        <% } %>
+                      <i data-item-status-icon class="<%= item.status === 'Pending' ? 'fas fa-clock text-yellow-500' : item.status === 'Shipped' ? 'fas fa-truck text-blue-500' : item.status === 'Delivered' ? 'fas fa-check-circle text-green-600' : 'fas fa-times-circle text-red-600' %>"></i>
                     </div>
-                    <% if(item.isRequested) {%>
-                      <p class="font-medium text-blue-600">
-                        Return requested
-                      </p>
-                    <% } %>
+                    <p data-item-return-note class="font-medium text-blue-600 <%= item.isRequested ? '' : 'hidden' %>">
+                      Return requested
+                    </p>
                   </div>
                 </div>
 
-                <div class="flex space-x-2">
-                  <% if (item.status==='Pending' && order.paymentStatus !== 'failed') { %>
-                    <button id="singleCancel" data-product-id="<%= item.productId %>" data-order-id="<%= order._id %>"
+                <div class="flex space-x-2" data-item-actions>
+                  <% if (item.status==='Pending' && order.paymentStatus !=='failed' ) { %>
+                    <button data-product-id="<%= item.productId %>" data-order-id="<%= order._id %>"
                       class="cancel-btn text-xs font-medium text-white bg-gray-600 hover:bg-red-600 px-2 py-1 rounded transition duration-200">
                       Cancel
                     </button>
                     <% } %>
-                    <% if (item.status==='Delivered' && !item.isRequested) { %>
-                        <button id="returnOrder" data-product-id="<%= item.productId %>" data-order-id="<%= order._id %>"
+                      <% if (item.status==='Delivered' && !item.isRequested) { %>
+                        <button data-product-id="<%= item.productId %>"
+                          data-order-id="<%= order._id %>"
                           class="return-btn text-xs font-medium text-white bg-gray-600 hover:bg-green-600 px-2 py-1 rounded transition duration-200">
                           Return
                         </button>
-                    <% }%>
- 
+                        <% }%>
+
                 </div>
               </div>
               <% }) %>
@@ -149,27 +169,47 @@
 
         <div class="mb-8">
           <h2 class="text-xl font-semibold text-gray-900 mb-5 border-b border-gray-200 pb-3">Shipping Address</h2>
-          <div class="text-gray-600 space-y-1">
-            <p>
-              Frist name : <%= (deliveryAddress)? deliveryAddress?.firstName:"" %>
-            </p>
-            <p>
-              Last name : <%= (deliveryAddress)?deliveryAddress?.lastName:"" %>
-            </p>
-            <p>
-              Street : <%= (deliveryAddress)?deliveryAddress?.street:"" %>, city : <%=
-                  (deliveryAddress)?deliveryAddress?.city:"" %>
-            </p>
-            <p>
-              State : <%= (deliveryAddress)?deliveryAddress?.state:"" %>
-            </p>
-            <p>
-              Pincode : <%= (deliveryAddress)?deliveryAddress?.pincode:"" %>
-            </p>
-            <p>Phone : <%= (deliveryAddress)?deliveryAddress?.phoneNumber:"" %>
-            </p>
-          </div>
+          <% if (deliveryAddress) { %>
+            <div
+              class="bg-gray-50 rounded-xl p-5 border border-gray-100 flex flex-col sm:flex-row sm:items-start gap-4">
+              <!-- Icon -->
+              <div class="shrink-0 w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="#555">
+                  <path
+                    d="M480-480q33 0 56.5-23.5T560-560q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560q0 33 23.5 56.5T480-480Zm0 294q122-112 181-203.5T720-552q0-109-69.5-178.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186Zm0 106Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 100-79.5 217.5T480-80Zm0-480Z" />
+                </svg>
+              </div>
+              <!-- Address info -->
+              <div class="flex-1 space-y-1 text-sm text-gray-700">
+                <p class="font-semibold text-gray-900 text-base">
+                  <%= deliveryAddress.firstName %>
+                    <%= deliveryAddress.lastName %>
+                </p>
+                <p>
+                  <%= deliveryAddress.street %>, <%= deliveryAddress.city %>
+                </p>
+                <p>
+                  <%= deliveryAddress.state %> — <%= deliveryAddress.pincode %>
+                </p>
+                <p class="text-gray-500 text-xs pt-1">📞 <%= deliveryAddress.phoneNumber %>
+                </p>
+              </div>
+              <!-- Type badge -->
+              <div class="shrink-0">
+                <span
+                  class="text-xs px-3 py-1 rounded-full font-medium capitalize
+                  <%= deliveryAddress.addressType === 'home' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' %>">
+                  <%= deliveryAddress.addressType %>
+                </span>
+              </div>
+            </div>
+            <% } else { %>
+              <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-sm text-yellow-800">
+                ⚠️ Delivery address information is not available for this order.
+              </div>
+              <% } %>
         </div>
+
 
         <div class="mb-8">
           <h2 class="text-xl font-semibold text-gray-900 mb-5 border-b border-gray-200 pb-3">Payment Method</h2>
@@ -178,23 +218,23 @@
           </p>
         </div>
 
-           <div class="flex space-x-6">
-          
-          <% if(order.status === "Delivered") {%>
+        <div class="flex space-x-6">
+
+          <% if(order.status==="Delivered" ) {%>
             <button id="invoice"
               class="invoice-btn bg-gray-400 align-end hover:bg-red-400 text-white font-semibold py-3 px-6 shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1"
               data-order-id="<%= order._id %>" onclick="invoice('<%= order._id %>')">
               Invoice
             </button>
-          <% } %>
-            <% if(order.paymentStatus === 'failed'){ %>
-              <button id="retryPayment" data-order-id="<%= order._id %>"
-                class="return-btn bg-green-400 align-end hover:bg-red-400 text-white font-semibold py-3 px-6 shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1">
-                Retry payment
-              </button>
             <% } %>
-          </div>
-<!--  -->
+              <% if(order.paymentStatus==='failed' ){ %>
+                <button id="retryPayment" data-order-id="<%= order._id %>"
+                  class="return-btn bg-green-400 align-end hover:bg-red-400 text-white font-semibold py-3 px-6 shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1">
+                  Retry payment
+                </button>
+                <% } %>
+        </div>
+        <!--  -->
       </div>
 
     </div>
@@ -203,112 +243,187 @@
       let isProcessing = false;
 
       function showToast(message, type = 'error') {
-          if (isToastShowing) return;
+        if (isToastShowing) return;
 
-          isToastShowing = true;
-          Toastify({
-              text: message,
-              duration: 2000,
-              gravity: "top",
-              position: "center",
-              backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
-              stopOnFocus: true,
-              callback: function () {
-                  isToastShowing = false;
-              }
-          }).showToast();
+        isToastShowing = true;
+        Toastify({
+          text: message,
+          duration: 2000,
+          gravity: "top",
+          position: "center",
+          backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
+          stopOnFocus: true,
+          callback: function () {
+            isToastShowing = false;
+          }
+        }).showToast();
       }
+      // Mirrors the status -> style mapping already used server-side in the EJS, so an item's
+      // row can be updated to its new status in place instead of reloading the page.
+      function itemStatusPresentation(status) {
+        if (status === 'Pending') return { textClass: 'text-yellow-500', icon: 'fas fa-clock text-yellow-500' };
+        if (status === 'Shipped') return { textClass: 'text-blue-500', icon: 'fas fa-truck text-blue-500' };
+        if (status === 'Delivered') return { textClass: 'text-green-600', icon: 'fas fa-check-circle text-green-600' };
+        return { textClass: 'text-red-600', icon: 'fas fa-times-circle text-red-600' }; // Cancelled / Returned
+      }
+
+      function paymentStatusClass(status) {
+        if (status === 'failed') return 'text-red-600 font-semibold';
+        if (status === 'Refunded') return 'text-yellow-600 font-semibold';
+        if (status === 'paid') return 'text-green-600 font-semibold';
+        if (status === 'pending') return 'text-yellow-600 font-semibold';
+        return 'text-gray-900 font-semibold';
+      }
+
+      // Updates one item row's status text/icon in place and removes its action buttons
+      // (Cancel/Return no longer apply once an item is cancelled or return-requested).
+      function updateItemRow(row, newStatus) {
+        const { textClass, icon } = itemStatusPresentation(newStatus);
+        const statusText = row.querySelector('[data-item-status-text]');
+        const statusIcon = row.querySelector('[data-item-status-icon]');
+        if (statusText) {
+          statusText.textContent = newStatus;
+          statusText.className = 'text-sm font-medium ' + textClass;
+        }
+        if (statusIcon) statusIcon.className = icon;
+
+        const actions = row.querySelector('[data-item-actions]');
+        if (actions) actions.innerHTML = '';
+      }
+
+      // order.totalAmount correctly nets to 0 once every item is cancelled/returned (it's the
+      // amount still owed, and admin sales reports rely on that), but showing "Rs. 0.00" reads
+      // as a broken price rather than "this was refunded". Once every item row is settled,
+      // switch the display to the original charged amount (embedded server-side, since it's
+      // reconstructed from fields cancellation never mutates) with a "(Refunded)" label,
+      // instead of the live totalAmount the cancel response returns.
+      function refreshOrderTotalDisplay(liveTotalAmount) {
+        const totalEl = document.getElementById('x');
+        if (!totalEl) return;
+
+        const allSettled = Array.from(document.querySelectorAll('[data-item-status-text]'))
+          .every(el => el.textContent.trim() === 'Cancelled' || el.textContent.trim() === 'Returned');
+
+        const totalRow = document.querySelector('[data-order-total-row]');
+        let note = totalRow?.querySelector('[data-order-total-note]');
+
+        if (allSettled) {
+          totalEl.textContent = totalEl.dataset.originalTotal;
+          if (!note && totalRow) {
+            note = document.createElement('span');
+            note.setAttribute('data-order-total-note', '');
+            note.className = 'text-xs font-normal text-gray-500 ml-1';
+            note.textContent = '(Refunded)';
+            totalEl.parentElement.appendChild(note);
+          }
+        } else {
+          if (typeof liveTotalAmount === 'number') totalEl.textContent = liveTotalAmount.toFixed(2);
+          if (note) note.remove();
+        }
+      }
+
       document.addEventListener('DOMContentLoaded', function () {
 
-      document.querySelectorAll('#singleCancel').forEach(button => {
-      button.addEventListener('click', async function () {
-        const productId = this.getAttribute('data-product-id');
-        const orderId = this.getAttribute('data-order-id');
+        document.querySelectorAll('.cancel-btn').forEach(button => {
+          button.addEventListener('click', async function () {
+            const productId = this.getAttribute('data-product-id');
+            const orderId = this.getAttribute('data-order-id');
 
-        const { value: reason } = await Swal.fire({
-          title: 'Cancel order',
-          html: `
+            const { value: reason } = await Swal.fire({
+              title: 'Cancel order',
+              html: `
             <p>Please provide a reason for returning this order:</p>
             <textarea id="returnReason" class="swal2-textarea w-96 p-2 border rounded" placeholder="Enter your reason here..." rows="4"></textarea>
           `,
-          showCancelButton: true,
-          confirmButtonText: 'Submit Cancel',
-          cancelButtonText: 'Cancel',
-          confirmButtonColor: '#000223',
-          cancelButtonColor: '#d33',
-          preConfirm: () => {
-            const reasonText = document.getElementById('returnReason').value.trim();
-            if (!reasonText) {
-              Swal.showValidationMessage('Please enter a reason for the return');
-              return false;
-            }
-            return reasonText;
-          }
-        });
-
-        if (!reason) return;
-
-        const confirm = await Swal.fire({
-          title: 'Are you sure?',
-          text: "You won't be able to revert this!",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
-          confirmButtonText: 'Yes, cancel it!'
-        });
-
-        if (!confirm.isConfirmed) return;
-
-        try {
-          const response = await fetch(`/single-cancel-order/${orderId}/${productId}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ reason })
-          });
-
-          const result = await response.json();
-
-          if (!response.ok) {
-            return Swal.fire({
-              icon: "error",
-              title: "Oops...",
-              text: result.message || "Something went wrong.",
-              footer: '<a href="/shop">Continue shopping</a>'
+              showCancelButton: true,
+              confirmButtonText: 'Submit Cancel',
+              cancelButtonText: 'Cancel',
+              confirmButtonColor: '#000223',
+              cancelButtonColor: '#d33',
+              preConfirm: () => {
+                const reasonText = document.getElementById('returnReason').value.trim();
+                if (!reasonText) {
+                  Swal.showValidationMessage('Please enter a reason for the return');
+                  return false;
+                }
+                return reasonText;
+              }
             });
-          }
 
-          //SUCCESS
-          Swal.fire({
-            title: result.message,
-            text: "Your order item has been cancelled.",
-            icon: "success"
-          }).then(() => {
-            location.reload()
+            if (!reason) return;
+
+            const confirm = await Swal.fire({
+              title: 'Are you sure?',
+              text: "You won't be able to revert this!",
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#3085d6',
+              cancelButtonColor: '#d33',
+              confirmButtonText: 'Yes, cancel it!'
+            });
+
+            if (!confirm.isConfirmed) return;
+
+            try {
+              const response = await fetch(`/single-cancel-order/${orderId}/${productId}`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason })
+              });
+
+              const result = await response.json();
+
+              if (!response.ok) {
+                return Swal.fire({
+                  icon: "error",
+                  title: "Oops...",
+                  text: result.message || "Something went wrong.",
+                  footer: '<a href="/shop">Continue shopping</a>'
+                });
+              }
+
+              //SUCCESS — update this item's row and the order summary in place, no reload
+              const row = this.closest('[data-item-row]');
+              if (row) updateItemRow(row, 'Cancelled');
+
+              refreshOrderTotalDisplay(result.totalAmount);
+
+              if (result.paymentStatus) {
+                const badge = document.getElementById('paymentStatusBadge');
+                if (badge) {
+                  badge.textContent = result.paymentStatus;
+                  badge.className = paymentStatusClass(result.paymentStatus);
+                }
+              }
+
+              Swal.fire({
+                title: result.message,
+                text: "Your order item has been cancelled.",
+                icon: "success"
+              });
+
+            } catch (error) {
+              console.error("Cancel error:", error);
+              Swal.fire({
+                icon: "error",
+                title: "Something went wrong",
+                text: "Please try again later."
+              });
+            }
           });
+        });
 
-        } catch (error) {
-          console.error("Cancel error:", error);
-          Swal.fire({
-            icon: "error",
-            title: "Something went wrong",
-            text: "Please try again later."
-          });
-        }
-      });
-    });
 
-        
-        
+
         const retryPaymentBtn = document.getElementById('retryPayment');
         const finalPrice = parseFloat(document.getElementById("x").textContent);
         console.log(finalPrice, 'Final price in paise');
 
         if (retryPaymentBtn) {
-          retryPaymentBtn.addEventListener('click', async function(e) {
+          retryPaymentBtn.addEventListener('click', async function (e) {
             const orderId = this.getAttribute('data-order-id');
             console.log(orderId);
-            
+
             try {
               const orderData = {
                 finalPrice: Number(finalPrice),
@@ -366,9 +481,16 @@
                     })
                   }).then(res => res.json())
                     .then(data => {
-                     
+                      // Only mark the order paid once Razorpay's signature actually verified —
+                      // this previously called retryPayment() unconditionally regardless of
+                      // what /verify-payment returned, so a failed/tampered verification would
+                      // still mark the order "paid" and decrement stock.
+                      if (data.status === 'Ok') {
                         retryPayment(orderId);
-                     
+                      } else {
+                        console.log(data.message);
+                        showToast('Payment verification failed', 'error');
+                      }
                     })
                     .catch((error) => {
                       console.error("Error:", error);
@@ -401,31 +523,36 @@
           });
         }
 
-            // retry payment function
-            async function retryPayment(orderId) {
-            try {
-              const response = await fetch('/retry-payment',{
-                method:"POST",
-                headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({orderId})
-              })
+        // retry payment function
+        async function retryPayment(orderId) {
+          try {
+            const response = await fetch('/retry-payment', {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId })
+            })
 
-              const result = await response.json()
-              if(!response.ok){
-                showToast(result.message)
-                return
-              }
-
-              return location.reload()
-
-            } catch (error) {
-              console.log(error.message)
-              
+            const result = await response.json()
+            if (!response.ok) {
+              showToast(result.message)
+              return
             }
-          }
-      
 
-          document.getElementById('returnOrder').addEventListener('click', async function () {
+            return location.reload()
+
+          } catch (error) {
+            console.log(error.message)
+
+          }
+        }
+
+
+        // querySelectorAll+forEach, not getElementById — an order can have more than one
+        // delivered item eligible for return, and each renders its own .return-btn. The old
+        // getElementById('returnOrder') only ever wired up the FIRST such button (and threw if
+        // there were none at all), so Return silently did nothing for any item after the first.
+        document.querySelectorAll('.return-btn').forEach(button => {
+        button.addEventListener('click', async function () {
           const orderId = this.getAttribute('data-order-id');
           const productId = this.getAttribute('data-product-id');
 
@@ -485,14 +612,22 @@
               return;
             }
 
+            // SUCCESS — reveal the "Return requested" note and remove the Return button in
+            // place, no reload. The item's own status stays 'Delivered' until an admin
+            // actually processes the return, so only the request-pending state changes here.
+            const row = this.closest('[data-item-row]');
+            if (row) {
+              const note = row.querySelector('[data-item-return-note]');
+              if (note) note.classList.remove('hidden');
+              const actions = row.querySelector('[data-item-actions]');
+              if (actions) actions.innerHTML = '';
+            }
+
             await Swal.fire({
               title: result.message,
               text: "Your item has been returned successfully.",
               icon: "success"
             });
-
-            location.reload()
-            // window.location.href = "/orders";
 
           } catch (error) {
             console.error("Return error:", error);
@@ -503,57 +638,58 @@
             });
           }
         });
+        });
 
-  })
-        // async function failedPayment() {
-        //         const data = {
-        //             addressId: selectedAddress || "",
-        //             paymentMethod: selectedPayment,
-        //             subTotal,
-        //             shippingCharge,
-        //             finalPrice,
-        //             discount,
-        //             paymentStatus: "failed"
-        //         }
-        //         try {
-        //             const response = await fetch(`/failed-payment`, {
-        //                 method: "POST",
-        //                 headers: { 'Content-Type': 'application/json' },
-        //                 body: JSON.stringify(data)
-        //             })
+      })
+      // async function failedPayment() {
+      //         const data = {
+      //             addressId: selectedAddress || "",
+      //             paymentMethod: selectedPayment,
+      //             subTotal,
+      //             shippingCharge,
+      //             finalPrice,
+      //             discount,
+      //             paymentStatus: "failed"
+      //         }
+      //         try {
+      //             const response = await fetch(`/failed-payment`, {
+      //                 method: "POST",
+      //                 headers: { 'Content-Type': 'application/json' },
+      //                 body: JSON.stringify(data)
+      //             })
 
-        //             const result = await response.json()
-        //             if (!response.ok) {
+      //             const result = await response.json()
+      //             if (!response.ok) {
 
-        //                 return
-        //             }
+      //                 return
+      //             }
 
-        //             showToast(result.message, 'success')
-        //             // window.location.href = '/success'
+      //             showToast(result.message, 'success')
+      //             // window.location.href = '/success'
 
-        //         } catch (error) {
-        //             console.log(error.message)
-        //             showToast(`Failed payment ${error.message}`)
-        //         }
-        //     }
+      //         } catch (error) {
+      //             console.log(error.message)
+      //             showToast(`Failed payment ${error.message}`)
+      //         }
+      //     }
 
-  function invoice(orderId) {
-      Swal.fire({
-        title: 'Generating Invoice...',
-        text: 'Please wait while we prepare your invoice.',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: true,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
+      function invoice(orderId) {
+        Swal.fire({
+          title: 'Generating Invoice...',
+          text: 'Please wait while we prepare your invoice.',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: true,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
 
-      setTimeout(() => {
-        window.open(`/invoice/${orderId}`);
-        Swal.close();
-      }, 1500);
-    }
+        setTimeout(() => {
+          window.open(`/invoice/${orderId}`);
+          Swal.close();
+        }, 1500);
+      }
 
     </script>
 </body>

@@ -8,6 +8,8 @@ import Order from "../../models/orderSchema.js"
 import Wallet from "../../models/walletSchema.js"
 import { generateInvoice } from '../../services/invoiceService.js';
 import Coupon from "../../models/couponSchema.js"
+
+
 export const renderOrdersPage = async (req, res, next) => {
   try {
     let { page, limit } = req.query
@@ -80,7 +82,7 @@ export const renderOrderDetailsPage = async (req, res, next) => {
     // const addressId = req.session.order
     // console.log(" addresssId", addressId)
     const orderId = req.params.id
-    const order = await Order.findOne({ orderId: orderId })
+    const order = await Order.findOne({ orderId: orderId, userId: user.id })
       .populate('coupon')
 
     if (!order) {
@@ -126,10 +128,18 @@ export const singleCancelOrder = async (req, res, next) => {
     const reason = req.body.reason
 
     //FIND ORDERS WITH LOOKUP COUPON
-    const orders = await Order.findById(orderId).populate('coupon');
+    const orders = await Order.findOne({ _id: orderId, userId: user.id }).populate('coupon');
 
     if (!orders) {
       return res.json({ success: false, message: "Orders not found" })
+    }
+
+    const targetItem = orders.items.find(item => item.productId.toString() === productId.toString());
+    if (!targetItem) {
+      return res.status(400).json({ success: false, message: "Item not found in this order" });
+    }
+    if (targetItem.status === 'Cancelled' || targetItem.status === 'Returned') {
+      return res.status(400).json({ success: false, message: "This item has already been cancelled" });
     }
 
     //CREATE TRANSACTION ID
@@ -140,10 +150,10 @@ export const singleCancelOrder = async (req, res, next) => {
     applyCouponAmount = orders.coupon?.discountValue || 0;
     console.log("Discount coupon Value:", applyCouponAmount);
 
-    const userWallet = await Wallet.findOne({ userId: user.id })
-    //IF WALLET NOT AVAILABLE CREATE NO
+    let userWallet = await Wallet.findOne({ userId: user.id })
+
     if (!userWallet) {
-      await Wallet.create({
+      userWallet = await Wallet.create({
         userId: user.id,
         balance: 0,
         transactions: []//SET EMPTY ARRAY
@@ -154,8 +164,9 @@ export const singleCancelOrder = async (req, res, next) => {
     for (let orderItem of orders.items) {
       if (orderItem.productId.toString() === productId.toString()) {
 
-        //TAKE UNCANCELLTED PRODUCTS
+        //TAKE UNCANCELLED PRODUCTS
         const remainingItems = orders.items.filter(item =>
+          item.productId.toString() !== productId.toString() &&
           item.status !== 'Cancelled' &&
           item.status !== 'Returned'
         );
@@ -181,7 +192,7 @@ export const singleCancelOrder = async (req, res, next) => {
         } else {
           if (orders.coupon) {
             // remainingItemsTotal -= orders.coupon.discountValue
-            refundAmount -= orders.coupon.discountValue//KEEP -VE COUPON VALUE REFUND ITS WILL SOLVE WHEN PRODUCT AMOUNT ADDED
+            refundAmount -= orders.coupon.discountValue
 
             orders.isCouponAvailable = false//MAKE COUPON FALSE
 
@@ -204,6 +215,20 @@ export const singleCancelOrder = async (req, res, next) => {
           }
         }
 
+        // ---- SHIPPING CHARGE REFUND ----
+        const allWillBeCancelled = orders.items.every(item => {
+          if (item.productId.toString() === productId.toString()) return true; // the one being cancelled now
+          return item.status === 'Cancelled' || item.status === 'Returned';
+        });
+
+        const shippingCharge = orders.shippingCharge || 0;
+        if (allWillBeCancelled && shippingCharge > 0) {
+          refundAmount += shippingCharge;
+          orders.totalAmount -= shippingCharge;
+          console.log(`Shipping charge Rs.${shippingCharge} refunded since all items are cancelled`);
+        }
+        // ---- END SHIPPING REFUND ----
+
         console.log(refundAmount, "refundAmount without coupon")
 
         //UPDATE INVENTORY
@@ -212,17 +237,18 @@ export const singleCancelOrder = async (req, res, next) => {
           orderItem.isCancelled = true
         orderItem.reason = reason
 
-        //UPDATE WALLET
-        userWallet.balance += Number(refundAmount) || 0;
-        userWallet.transactions.push({
-          orderId: orders._id,
-          transactionId: transactionID,
-          amount: Number(refundAmount),
-          transactionType: 'credit',
-          source: 'refund',
-          createdAt: new Date(),
-          productId
-        });
+        if (orders.paymentStatus === 'paid' || orders.paymentStatus === 'Refunded') {
+          userWallet.balance += Number(refundAmount) || 0;
+          userWallet.transactions.push({
+            orderId: orders._id,
+            transactionId: transactionID,
+            amount: Number(refundAmount),
+            transactionType: 'credit',
+            source: 'refund',
+            createdAt: new Date(),
+            productId
+          });
+        }
       }
       console.log("userWallet ", userWallet)
     }
@@ -240,8 +266,16 @@ export const singleCancelOrder = async (req, res, next) => {
 
     await orders.save()
     await userWallet.save()
-    console.log(`Order cancelled ${refundAmount}`)
-    return res.status(200).json({ success: true, message: "Order successfully cancelled" })
+    console.log(`Order cancelled, total refund: ${refundAmount}`)
+    // Returning the updated order-level fields lets the client update the summary (total,
+    // payment status) in place instead of reloading the page to see them.
+    return res.status(200).json({
+      success: true,
+      message: "Order successfully cancelled",
+      totalAmount: orders.totalAmount,
+      orderStatus: orders.status,
+      paymentStatus: orders.paymentStatus
+    })
 
   } catch (error) {
     next(new AppError(`Single order cancellation : ${error}`, 500))
@@ -256,22 +290,28 @@ export const returnOrder = async (req, res, next) => {
     const user = req.user
     const reason = req.body.reason
 
-    const orders = await Order.findById(orderId)
+    const orders = await Order.findOne({ _id: orderId, userId: user.id })
     console.log(orders, "orders")
 
     if (!orders) return res.status(404).json({ success: false, message: "Order not found" });
 
-    let refundAmount = 0
-    for (let item of orders.items) {
-      if (item.productId.toString() === productId.toString() && !item.isRequested) {
-        const product = await Product.findById(productId)
-        item.isRequested = true
-        item.reason = reason
-      }
+    const targetItem = orders.items.find(item => item.productId.toString() === productId.toString());
+    if (!targetItem) {
+      return res.status(400).json({ success: false, message: "Item not found in this order" });
     }
 
+    if (targetItem.status !== 'Delivered') {
+      return res.status(400).json({ success: false, message: "Only delivered items can be returned" });
+    }
+
+    if (targetItem.isRequested) {
+      return res.status(400).json({ success: false, message: "A return has already been requested for this item" });
+    }
+
+    targetItem.isRequested = true
+    targetItem.reason = reason
+
     await orders.save()
-    // console.log(`Order cancelled ${refundAmount}`)
     return res.status(200).json({ success: true, message: "Return request has done" })
 
   } catch (error) {
@@ -328,7 +368,8 @@ export const downloadInvoice = async (req, res, next) => {
   try {
     const orderId = req.params.orderId;
     const user = await User.findById(req.user.id);
-    const order = await Order.findById(orderId).populate('addressId').populate('coupon');
+
+    const order = await Order.findOne({ _id: orderId, userId: req.user.id }).populate('addressId').populate('coupon');
 
     if (!order) {
       return res.status(400).json({ success: false, message: "Invalid order details" });

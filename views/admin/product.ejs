@@ -13,17 +13,6 @@
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <style>
         @media (max-width: 768px) {
-            #sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-            }
-
-            .main-content {
-                margin-left: 0 !important;
-                padding: 1rem;
-            }
-
             .table-container {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
@@ -49,127 +38,28 @@
 </head>
 
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
-    <div class="container-fluid flex ">
+    <div class="container-fluid">
         <!-- Sidebar -->
-        <div class="fixed md:sticky top-0 left-0 w-full md:w-[16%] h-auto md:h-screen bg-gray-400 py-5 shadow-lg flex flex-col" id="sidebar">
-            <div class="px-5 text-2xl font-bold text-gray-700 pb-6">REad & GroW</div>
-            <div class="flex flex-col flex-grow">
-                <button data-path="/admin/dashboard" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    Dashboard
-                </button>
-                <button data-path="/admin/sales-report" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    Sales Report
-                </button>
-                <button data-path="/admin/products" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    Product
-                </button>
-                <button data-path="/admin/users" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    User
-                </button>
-                <button data-path="/admin/orders" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    Orders
-                </button>
-                <button data-path="/admin/category" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    Category
-                </button>
-                <button data-path="/admin/offers" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    Offers
-                </button>
-                <button data-path="/admin/coupons" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    Coupons
-                </button>
-                <button data-path="/admin/transactions?page=1&limit=10" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-                    Transactions
-                </button>
-            </div>
-            <button id="logoutButton" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 mt-auto border-t border-gray-500 transition duration-200">
-                Logout
-            </button>
-        </div>
-        
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const buttons = document.querySelectorAll('.nav-button');
-                const currentPath = window.location.pathname; // e.g., "/admin/products" or "/admin/users?page=1&limit=6"
-        
-                // Function to remove query parameters for cleaner comparison
-                const getBasePath = (path) => path.split('?')[0];
-        
-                // Set active button on page load
-                buttons.forEach(button => {
-                    const buttonPath = button.dataset.path ? getBasePath(button.dataset.path) : null;
-                    const currentBasePath = getBasePath(currentPath);
-        
-                    // Highlight the button if the current path matches the button's base path
-                    if (buttonPath && currentBasePath === buttonPath) {
-                        button.classList.add("bg-black", "text-white");
-                        button.classList.remove("hover:bg-gray-300");
-                    } else {
-                        // Ensure non-active buttons retain their hover effect
-                        button.classList.remove("bg-black", "text-white");
-                        button.classList.add("hover:bg-gray-300");
-                    }
-        
-                    // Attach click event to navigate (excluding logout button)
-                    if (button.dataset.path && button.id !== "logoutButton") {
-                        button.addEventListener('click', () => {
-                            window.location.href = button.dataset.path;
-                        });
-                    }
-                });
-        
-                // Logout functionality
-                document.getElementById("logoutButton").addEventListener('click', async () => {
-                    const { value: confirmed } = await Swal.fire({
-                        title: 'Are you sure you want to log out?',
-                        text: "You won't be able to log in again unless you provide credentials.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Yes, log me out',
-                        cancelButtonText: 'Cancel',
-                        reverseButtons: true
-                    });
-        
-                    if (confirmed) {
-                        try {
-                            const response = await fetch("http://localhost:3999/admin/logout", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" }
-                            });
-        
-                            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        
-                            const result = await response.json();
-        
-                            if (result.success) {
-                                Swal.fire("Logged out", "You are successfully logged out", "success");
-                                setTimeout(() => { window.location.href = "/admin/login"; }, 1500);
-                            } else {
-                                Swal.fire("Logout Failed", "There was a problem in logout. Please try again later", "error");
-                            }
-                        } catch (error) {
-                            console.error('Logout error:', error);
-                            Swal.fire("Error!", "An error occurred. Please try again later.", "error");
-                        }
-                    }
-                });
-            });
-        </script>
+        <%- include("../partials/admin/adminSideBar.ejs") %>
 
-            <div class="flex-1 main-content w-full md:ml-[0%]">
-                <header class="bg-white shadow-sm sticky top-0 z-10">
+            <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 min-w-0">
+                <header class="bg-white shadow-sm sticky top-0 z-10 rounded-xl">
                     <div class="flex justify-between items-center px-4 sm:px-6 py-4">
                         <h1 class="text-xl sm:text-2xl font-semibold text-gray-800">Product Management</h1>
                         <div class="flex items-center space-x-4 sm:space-x-6"></div>
                     </div>
                 </header>
 
-                <main class="p-4 sm:p-6">
-                    <div class="bg-white rounded-lg shadow-md">
+                <main class="pt-4 sm:pt-6">
+                    <div class="bg-white rounded-xl shadow-sm">
                         <div
                             class="p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between border-b border-gray-200">
                             <h2 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4 lg:mb-0">Product List</h2>
-                            <div class="flex flex-col sm:flex-row items-center w-full sm:w-auto gap-4">
+                            <!-- flex-wrap: between the sm and lg breakpoints (sidebar fixed at 256px
+                                 static, this row un-stacked) the search box + Search + Reset + Add
+                                 Product buttons together didn't fit one line and pushed the whole
+                                 page into a horizontal scrollbar instead of wrapping. -->
+                            <div class="flex flex-col sm:flex-row flex-wrap items-center w-full sm:w-auto gap-4">
                                 <form id="searchForm"
                                     class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                                     <div class="relative w-full sm:w-64">
@@ -262,12 +152,15 @@
                         </div>
                     </div>
                         <div class="flex justify-center mt-6">
+                            <%
+                              const pageQuery = query ? '&query=' + encodeURIComponent(query) : '';
+                            %>
                             <nav class="flex justify-center mt-6">
-                                <ul class="inline-flex items-center -space-x-px text-sm">
+                                <ul id="paginationList" class="inline-flex items-center -space-x-px text-sm">
                                   <!-- Previous Page -->
                                   <% if(page > 1){ %>
                                     <li>
-                                      <a href="/admin/products?page=<%= page - 1 %>&limit=<%= limit %>" 
+                                      <a href="/admin/products?page=<%= page - 1 %>&limit=<%= limit %><%= pageQuery %>"
                                          class="flex items-center justify-center px-3 h-10 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -283,23 +176,23 @@
                                       </span>
                                     </li>
                                   <% } %>
-                              
+
                                   <!-- Page Numbers -->
                                   <% for(let i = 1; i <= totalPages; i++) { %>
                                     <li>
-                                      <a href="/admin/products?page=<%= i %>&limit=<%= limit %>" 
-                                         class="flex items-center justify-center px-3 h-10 leading-tight 
-                                                border border-gray-300 
+                                      <a href="/admin/products?page=<%= i %>&limit=<%= limit %><%= pageQuery %>"
+                                         class="flex items-center justify-center px-3 h-10 leading-tight
+                                                border border-gray-300
                                                 <%= page === i ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-100' %>">
                                         <%= i %>
                                       </a>
                                     </li>
                                   <% } %>
-                              
+
                                   <!-- Next Page -->
                                   <% if(page < totalPages){ %>
                                     <li>
-                                      <a href="/admin/products?page=<%= page + 1 %>&limit=<%= limit %>" 
+                                      <a href="/admin/products?page=<%= page + 1 %>&limit=<%= limit %><%= pageQuery %>"
                                          class="flex items-center justify-center px-3 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -317,7 +210,7 @@
                                   <% } %>
                                 </ul>
                               </nav>
-                              
+
                         </div>
                     
                 </main>
@@ -325,6 +218,12 @@
     </div>
 
     <script>
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
+
         // Initialize Toastify
         const toastifyOptions = {
             duration: 3000,
@@ -437,7 +336,8 @@
         document.addEventListener("DOMContentLoaded", function () {
            const form = document.getElementById("searchForm");
            const tbody = document.querySelector('tbody');
-           const paginationNav = document.querySelector('.flex.space-x-2');
+
+           const paginationNav = document.getElementById('paginationList');
            let currentQuery = '';
            let currentPage = 1;
            const limit = 5; // You can adjust this or make it dynamic if needed
@@ -484,19 +384,21 @@
                                </tr>`;
                        } else {
                            data.allProducts.forEach(product => {
+                               const safeName = escapeHtml(product.name || 'Unnamed Product');
+                               const safeCategory = escapeHtml(product?.category || 'Uncategorized');
                                tbody.innerHTML += `
                                    <tr class="hover:bg-gray-50 transition">
                                        <td class="px-6 py-4 whitespace-nowrap">
                                            <div class="flex items-center">
-                                               <img src="${product?.images?.[0] || '/default-image.jpg'}" 
-                                                    alt="Book cover" 
+                                               <img src="${product?.images?.[0] || '/default-image.jpg'}"
+                                                    alt="Book cover"
                                                     class="h-14 w-14 rounded-md object-cover">
-                                               <div class="ml-4">${product.name || 'Unnamed Product'}</div>
+                                               <div class="ml-4">${safeName}</div>
                                            </div>
                                        </td>
                                        <td class="px-6 py-4 whitespace-nowrap">
                                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                                               ${product?.category || 'Uncategorized'}
+                                               ${safeCategory}
                                            </span>
                                        </td>
                                        <td class="px-6 py-4 whitespace-nowrap">${product?.stock || 0} copies</td>

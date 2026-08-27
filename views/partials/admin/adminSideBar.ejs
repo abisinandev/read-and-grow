@@ -1,68 +1,152 @@
-<div class="fixed md:sticky top-0 left-0 w-full md:w-[16%] h-auto md:h-screen bg-gray-400 py-5 shadow-lg flex flex-col" id="sidebar">
-    <div class="px-5 text-2xl font-bold text-gray-700 pb-6">REad & GroW</div>
-    <div class="flex flex-col flex-grow">
-        <button data-path="/admin/dashboard" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            Dashboard
-        </button>
-        <button data-path="/admin/sales-report" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            Sales Report
-        </button>
-        <button data-path="/admin/products" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            Product
-        </button>
-        <button data-path="/admin/users" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            User
-        </button>
-        <button data-path="/admin/orders" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            Orders
-        </button>
-        <button data-path="/admin/category" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            Category
-        </button>
-        <button data-path="/admin/offers" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            Offers
-        </button>
-        <button data-path="/admin/coupons" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            Coupons
-        </button>
-        <button data-path="/admin/transactions?page=1&limit=10" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 transition duration-200">
-            Transactions
+<script>
+    // This sidebar depends on FontAwesome (its icons) and SweetAlert2 (the logout confirmation
+    // dialog) being loaded by whichever page includes it — several admin pages have forgotten
+    // one or both, most visibly as the Logout button silently doing nothing at all (Swal.fire()
+    // throwing "Swal is not defined", with no visible error to the admin). Rather than relying
+    // on every current and future admin page to remember both includes, load them here if
+    // they're missing. document.write during initial parse is parser-blocking, so
+    // DOMContentLoaded in the script below is guaranteed to fire only after these are ready.
+    if (!document.querySelector('link[href*="font-awesome"]')) {
+        document.write('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">');
+    }
+    if (typeof Swal === 'undefined') {
+        document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.min.css">');
+        document.write('<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.all.min.js"><' + '/script>');
+    }
+</script>
+
+<button id="sidebarToggle" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar"
+    class="md:hidden fixed top-4 left-4 z-50 w-11 h-11 rounded-xl bg-slate-900 text-white shadow-lg flex items-center justify-center">
+    <i class="fas fa-bars text-lg"></i>
+</button>
+
+<!-- Backdrop shown behind the sidebar while it's open on mobile. -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden"></div>
+
+<aside id="sidebar"
+    class="fixed inset-y-0 left-0 z-50 w-72 -translate-x-full transition-transform duration-300 ease-in-out
+           md:static md:translate-x-0 md:w-64 md:shrink-0
+           h-screen md:h-auto md:min-h-screen bg-slate-800 text-slate-300 flex flex-col overflow-y-auto">
+
+    <div class="flex items-center justify-between px-6 py-6 border-b border-white/10">
+        <a href="/admin/dashboard" class="flex items-center gap-2.5 text-white">
+            <span class="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+                <i class="fas fa-book-open text-sm"></i>
+            </span>
+            <span class="text-lg font-semibold tracking-tight">REad &amp; GroW</span>
+        </a>
+        <button id="sidebarClose" aria-label="Close menu" class="md:hidden text-slate-400 hover:text-white p-1">
+            <i class="fas fa-times text-lg"></i>
         </button>
     </div>
-    <button id="logoutButton" class="nav-button w-full px-5 py-4 text-left text-base hover:bg-gray-300 mt-auto border-t border-gray-500 transition duration-200">
-        Logout
-    </button>
-</div>
+
+    <nav class="flex-1 px-3 py-4 space-y-1">
+        <button data-path="/admin/dashboard" data-icon="fa-gauge-high" class="nav-button">
+            <i class="fas fa-gauge-high w-5 text-center"></i><span>Dashboard</span>
+        </button>
+        <button data-path="/admin/sales-report" data-icon="fa-chart-line" class="nav-button">
+            <i class="fas fa-chart-line w-5 text-center"></i><span>Sales Report</span>
+        </button>
+        <button data-path="/admin/products" data-icon="fa-book" class="nav-button">
+            <i class="fas fa-book w-5 text-center"></i><span>Products</span>
+        </button>
+        <button data-path="/admin/users" data-icon="fa-users" class="nav-button">
+            <i class="fas fa-users w-5 text-center"></i><span>Users</span>
+        </button>
+        <button data-path="/admin/orders" data-icon="fa-box" class="nav-button">
+            <i class="fas fa-box w-5 text-center"></i><span>Orders</span>
+        </button>
+        <button data-path="/admin/category" data-icon="fa-tags" class="nav-button">
+            <i class="fas fa-tags w-5 text-center"></i><span>Category</span>
+        </button>
+        <button data-path="/admin/offers" data-icon="fa-percent" class="nav-button">
+            <i class="fas fa-percent w-5 text-center"></i><span>Offers</span>
+        </button>
+        <button data-path="/admin/coupons" data-icon="fa-ticket" class="nav-button">
+            <i class="fas fa-ticket w-5 text-center"></i><span>Coupons</span>
+        </button>
+        <button data-path="/admin/transactions?page=1&limit=10" data-icon="fa-receipt" class="nav-button">
+            <i class="fas fa-receipt w-5 text-center"></i><span>Transactions</span>
+        </button>
+    </nav>
+
+    <div class="px-3 py-4 border-t border-white/10">
+        <button id="logoutButton" class="nav-button">
+            <i class="fas fa-right-from-bracket w-5 text-center"></i><span>Logout</span>
+        </button>
+    </div>
+</aside>
+
+<style>
+    #sidebar .nav-button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.625rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-align: left;
+        color: rgb(203 213 225);
+        /* slate-300 */
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    #sidebar .nav-button:hover {
+        background-color: rgba(255, 255, 255, 0.06);
+        color: #fff;
+    }
+
+    #sidebar .nav-button.active {
+        background-color: rgba(99, 102, 241, 0.15);
+        /* indigo-500 @ 15% */
+        color: #fff;
+        /* box-shadow: inset 3px 0 0 0 rgb(99 102 241); */
+        /* indigo-500 accent bar */
+    }
+</style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const buttons = document.querySelectorAll('.nav-button');
-        const currentPath = window.location.pathname; // e.g., "/admin/products" or "/admin/users?page=1&limit=6"
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        const closeBtn = document.getElementById('sidebarClose');
 
-        // Function to remove query parameters for cleaner comparison
+        function openSidebar() {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+            toggleBtn.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+
+        toggleBtn?.addEventListener('click', openSidebar);
+        closeBtn?.addEventListener('click', closeSidebar);
+        overlay?.addEventListener('click', closeSidebar);
+
+        window.matchMedia('(min-width: 768px)').addEventListener('change', (e) => {
+            if (e.matches) closeSidebar();
+        });
+
+        const buttons = document.querySelectorAll('.nav-button[data-path]');
         const getBasePath = (path) => path.split('?')[0];
+        const currentBasePath = getBasePath(window.location.pathname);
 
-        // Set active button on page load
         buttons.forEach(button => {
-            const buttonPath = button.dataset.path ? getBasePath(button.dataset.path) : null;
-            const currentBasePath = getBasePath(currentPath);
+            const buttonPath = getBasePath(button.dataset.path);
+            button.classList.toggle('active', buttonPath === currentBasePath);
 
-            // Highlight the button if the current path matches the button's base path
-            if (buttonPath && currentBasePath === buttonPath) {
-                button.classList.add("bg-black", "text-white");
-                button.classList.remove("hover:bg-gray-300");
-            } else {
-                // Ensure non-active buttons retain their hover effect
-                button.classList.remove("bg-black", "text-white");
-                button.classList.add("hover:bg-gray-300");
-            }
-
-            // Attach click event to navigate (excluding logout button)
-            if (button.dataset.path && button.id !== "logoutButton") {
-                button.addEventListener('click', () => {
-                    window.location.href = button.dataset.path;
-                });
-            }
+            button.addEventListener('click', () => {
+                window.location.href = button.dataset.path;
+            });
         });
 
         // Logout functionality

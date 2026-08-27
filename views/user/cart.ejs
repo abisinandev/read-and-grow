@@ -23,14 +23,23 @@
     <%- include("../partials/user/navBar.ejs") %> 
 
     <div class="cart-container px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Breadcrumb -->
+        <nav class="text-gray-600 text-sm mb-6">
+            <ol class="flex space-x-2">
+                <li><a href="/" class="hover:text-gray-900 transition">Home</a></li>
+                <li><span class="text-gray-400">/</span></li>
+                <li class="text-gray-900 font-medium">Shopping Cart</li>
+            </ol>
+        </nav>
+
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
 
         <div class="flex flex-col lg:flex-row gap-6">
             <!-- Cart Products (Left Side) -->
-            <div class="lg:w-2/3 w-full">
+            <div class="lg:w-2/3 w-full" id="cart-items-area">
                 <% if (allCartProducts && allCartProducts.length > 0) { %>
                     <% allCartProducts.forEach((product) => { %>
-                        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-4 mb-4">
+                        <div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-4 mb-4" id="cart-card-<%= product._id %>">
                             <div class="flex flex-col sm:flex-row gap-4 items-center">
                                 <!-- Product Image -->
                                 <div class="w-32 flex-shrink-0">
@@ -296,7 +305,21 @@
 
                 if (result.success) {
                     showToast(result.message, 'success');
-                    location.reload();  
+                    // REMOVE THE CARD FROM THE DOM WITHOUT RELOAD
+                    const card = document.getElementById(`cart-card-${productId}`);
+                    if (card) {
+                        card.style.transition = 'opacity 0.3s, height 0.3s';
+                        card.style.opacity = '0';
+                        setTimeout(() => {
+                            card.remove();
+                            updateTotal();
+                            //CHECK IF CART IS NOW EMPTY
+                            const remaining = document.querySelectorAll('input[id^="quantity-"]');
+                            if (remaining.length === 0) {
+                                document.getElementById('cart-items-area').innerHTML = '<p class="text-center text-gray-600">Your cart is empty. <a href="/shop" class="text-blue-600 underline">Browse Books</a></p>';
+                            }
+                        }, 300);
+                    }
                 }
             } catch (error) {
                 console.error(`Remove item from cart: ${error}`);

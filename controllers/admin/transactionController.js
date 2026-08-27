@@ -2,14 +2,17 @@ import Order from "../../models/orderSchema.js"
 import Wallet from "../../models/walletSchema.js"
 import AppError from "../../utils/errorHandler.js"
 
+const escapeRegExp = (string = '') => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const transactionManagment = async (req, res, next) => {
     try {
-        let { page, limit} = req.query 
+        let { page, limit, query } = req.query
         page = parseInt(page) || 1
         limit = parseInt(limit) || 10
+        query = query || ''
         let skip = (page - 1) * limit
 
-        const wallets = await Wallet.aggregate([
+        const basePipeline = [
             { $unwind: "$transactions" },
             {
                 $lookup: {
@@ -20,25 +23,33 @@ export const transactionManagment = async (req, res, next) => {
                 }
             },
             { $unwind: "$user" },
+        ]
+
+        if (query) {
+            basePipeline.push({
+                $match: {
+                    $or: [
+                        { "transactions.transactionId": { $regex: escapeRegExp(query), $options: "i" } },
+                        { "user.username": { $regex: escapeRegExp(query), $options: "i" } },
+                        { "user.email": { $regex: escapeRegExp(query), $options: "i" } },
+                    ]
+                }
+            })
+        }
+
+        const wallets = await Wallet.aggregate([
+            ...basePipeline,
             { $sort: { "transactions.createdAt": -1 } },
             { $skip: skip },
             { $limit: limit },
-            // {
-            //     $project: {
-            //         transactionId: "$transactions.transactionId",
-            //         amount: "$transactions.amount",
-            //         userName: "$user.username"
-            //     }
-            // }
         ]);
- 
 
-        const totalTransactions = await Wallet.aggregate([
-            { $unwind: "$transactions" },
+        const totalTransactionsResult = await Wallet.aggregate([
+            ...basePipeline,
             { $count: "count" }
         ]);
 
-        const count = totalTransactions[0]?.count || 0;
+        const count = totalTransactionsResult[0]?.count || 0;
         const totalPages = Math.ceil(count / limit);
 
         res.render("admin/transactions", {
@@ -46,6 +57,7 @@ export const transactionManagment = async (req, res, next) => {
             page,
             totalPages,
             limit,
+            query,
         });
 
     } catch (error) {

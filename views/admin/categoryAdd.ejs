@@ -11,17 +11,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.5.0/dist/sweetalert2.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <style>
-        @media (max-width: 768px) {
-            #sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-            }
-            .main-content {
-                margin-left: 0 !important;
-                padding: 1rem;
-            }
-        }
         * {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -40,13 +29,13 @@
 
 <body class="bg-gray-50 text-gray-800 font-sans">
     <div class="container-fluid">
-        
+
         <!-- Sidebar -->
         <%- include("../partials/admin/adminSideBar.ejs") %>
 
         <!-- Main Content -->
-        <div class="flex-1 main-content p-6" style="margin-left: calc(5% + 0px);">
-            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6">
+        <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 min-w-0">
+            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6 rounded-xl">
                 <div class="flex justify-between items-center px-6 py-4">
                     <h1 class="text-2xl font-semibold text-gray-800">Add New Category</h1>
                 </div>
@@ -64,14 +53,19 @@
                     <div>
                         <label for="categoryName" class="block text-sm font-medium text-gray-700 mb-1">Category Name*</label>
                         <input type="text" id="categoryName" name="categoryName" required
+                            pattern="[A-Za-z][A-Za-z0-9&amp;',.\-\s]{1,49}"
+                            title="Must start with a letter; letters, numbers, spaces, and &amp; ' , . - only"
+                            placeholder="e.g. Sci-Fi &amp; Fantasy"
                             class="mt-1 block w-full border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <p id="categoryNameError" class="mt-1 text-sm text-red-600 hidden"></p>
                     </div>
 
                     <!-- Category Description -->
                     <div>
                         <label for="categoryDescription" class="block text-sm font-medium text-gray-700 mb-1">Description*</label>
-                        <textarea id="categoryDescription" name="categoryDescription" required rows="4"
+                        <textarea id="categoryDescription" name="categoryDescription" required rows="4" maxlength="500"
                             class="mt-1 block w-full border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        <p id="categoryDescriptionError" class="mt-1 text-sm text-red-600 hidden"></p>
                     </div>
 
                     <!-- Category Status -->
@@ -101,6 +95,37 @@
     </div>
 
     <script>
+        // Mirrors the server-side CATEGORY_NAME_REGEX/CATEGORY_DESCRIPTION_REGEX in
+        // adminController.js — catches obviously-invalid input immediately instead of making
+        // the admin wait on a round trip to find out.
+        const CATEGORY_NAME_REGEX = /^[A-Za-z][A-Za-z0-9&',.\-\s]{1,49}$/;
+        const CATEGORY_DESCRIPTION_REGEX = /^[^<>]{1,500}$/;
+
+        function showFieldError(fieldId, message) {
+            const el = document.getElementById(fieldId + 'Error');
+            if (!el) return;
+            if (message) {
+                el.textContent = message;
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+
+        function validateCategoryForm(categoryName, categoryDescription) {
+            if (!CATEGORY_NAME_REGEX.test(categoryName)) {
+                showFieldError('categoryName', "Must start with a letter and contain only letters, numbers, spaces, and & ' , . -");
+                return false;
+            }
+            showFieldError('categoryName', '');
+            if (!CATEGORY_DESCRIPTION_REGEX.test(categoryDescription)) {
+                showFieldError('categoryDescription', "Under 500 characters, and cannot contain < or >");
+                return false;
+            }
+            showFieldError('categoryDescription', '');
+            return true;
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
             document.getElementById('addCategory').addEventListener('submit', async function (event) {
                 event.preventDefault();
@@ -108,6 +133,10 @@
                 const categoryName = document.getElementById('categoryName').value.trim();
                 const categoryDescription = document.getElementById('categoryDescription').value.trim();
                 const categoryStatus = document.getElementById('categoryStatus').value.trim();
+
+                if (!validateCategoryForm(categoryName, categoryDescription)) {
+                    return;
+                }
 
                 try {
                     Swal.fire({

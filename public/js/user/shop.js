@@ -1,14 +1,9 @@
- 
-function showToast(message, type = 'error') {
-    Toastify({
-        text: message,
-        duration: 3000,
-        gravity: "top",
-        position: "center",
-        backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
-        stopOnFocus: true,
-    }).showToast();
-}
+
+// NOTE: showToast(), addToCart()/isAddToCart, and initMobileFilters() are intentionally
+// NOT redefined here — they're already declared globally by showMessage.js, which this
+// page loads before shop.js. Redeclaring `let isAddToCart` a second time in the same
+// (non-module) global scope throws a SyntaxError that aborts this entire script before
+// any listener below gets attached, silently breaking filtering/sorting/pagination.
 
 document.addEventListener('DOMContentLoaded', function () {
     console.log("Shop page initialized");
@@ -21,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const limit = document.getElementById('limit')?.value || 6;
     const body = document.body;
 
- 
+
 
     // Mobile filter functionality
     initMobileFilters();
@@ -31,7 +26,8 @@ document.addEventListener('DOMContentLoaded', function () {
         search: body.getAttribute("data-search") || "",
         category: body.getAttribute("data-category") || "",
         author: body.getAttribute("data-author") || "",
-        price: body.getAttribute("data-price") || ""
+        price: body.getAttribute("data-price") || "",
+        sort: body.getAttribute("data-sort") || ""
     };
 
     // Highlight active filters in sidebar
@@ -42,11 +38,35 @@ document.addEventListener('DOMContentLoaded', function () {
     mobileSearchForm?.addEventListener("submit", filterProducts);
 
     // Filter click handlers
-    document.querySelectorAll('aside a, .filter-sidebar a').forEach(link => {
+    document.querySelectorAll('.filter-link').forEach(link => {
         link.addEventListener('click', async function (event) {
             event.preventDefault();
-            await fetchAndUpdate(this.href);
-            highlightActiveFilters();
+
+            const filterType = this.getAttribute('data-filter');
+            const filterValue = this.getAttribute('data-value');
+
+            if (filterType === 'category' && filterValue === 'all') {
+                // "All Categories" clears every active filter, not just category
+                currentFilters.search = '';
+                currentFilters.category = '';
+                currentFilters.author = '';
+                currentFilters.price = '';
+                currentFilters.sort = '';
+
+                // Reflect the reset in the search inputs and sort dropdowns too
+                document.querySelectorAll('input[name="search"]').forEach(input => { input.value = ''; });
+                document.querySelectorAll('select[name="sortOptions"]').forEach(select => { select.value = 'default'; });
+            } else if (filterType) {
+                if (filterValue === 'all') {
+                    currentFilters[filterType] = '';
+                } else {
+                    currentFilters[filterType] = filterValue;
+                }
+            }
+
+            // Reset to page 1 on filter change
+            const url = buildUrl(1, currentFilters);
+            await fetchAndUpdate(url);
 
             // Close mobile filter sidebar if open
             const filterSidebar = document.getElementById('filterSidebar');
@@ -56,6 +76,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 filterOverlay?.classList.remove('active');
                 document.body.style.overflow = '';
             }
+        });
+    });
+
+    // Sort selection handler
+    document.querySelectorAll('select[name="sortOptions"]').forEach(select => {
+        select.addEventListener('change', async function (event) {
+            const val = this.value;
+            const sortVal = val.replace('/sort/', '').replace('/shop', ''); // clean it up if it has old path
+            currentFilters.sort = (sortVal === 'default' || !sortVal) ? '' : sortVal;
+            const url = buildUrl(1, currentFilters);
+            await fetchAndUpdate(url);
+
+            // Sync all sort dropdowns
+            document.querySelectorAll('select[name="sortOptions"]').forEach(s => {
+                if (s !== this) s.value = this.value;
+            });
         });
     });
 
@@ -97,11 +133,23 @@ document.addEventListener('DOMContentLoaded', function () {
         if (filters.category) url += `&category=${encodeURIComponent(filters.category)}`;
         if (filters.author) url += `&author=${encodeURIComponent(filters.author)}`;
         if (filters.price) url += `&price=${encodeURIComponent(filters.price)}`;
+        if (filters.sort) url += `&sort=${encodeURIComponent(filters.sort)}`;
         return url;
     }
 
+    // Tracks the most recently triggered filter/sort/pagination request so an older, slower
+    // request can never resolve after a newer one and clobber the UI with stale results (e.g.
+    // clicking "All Categories" right after another filter). We deliberately do NOT use
+    // AbortController to cancel the superseded request's underlying HTTP call — aborting it
+    // client-side left the reused keep-alive connection stuck server-side, causing the NEXT
+    // request queued on that same connection to hang forever. Instead we just let every
+    // request run to completion and silently discard the result of any that's no longer latest.
+    let latestRequestId = 0;
+
     // Fetch data and update UI
     async function fetchAndUpdate(url) {
+        const requestId = ++latestRequestId;
+
         try {
             // Show loading indicator
             bookGrid.innerHTML = '<div class="col-span-full flex justify-center py-12"><i class="fas fa-spinner fa-spin fa-3x text-gray-400"></i></div>';
@@ -111,11 +159,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
 
+            if (requestId !== latestRequestId) return; // superseded by a newer request while this one was in flight
+
             if (!response.ok) {
                 throw new Error('Server responded with an error');
             }
 
             const result = await response.json();
+
+            if (requestId !== latestRequestId) return; // superseded while parsing the response
 
             if (result.success) {
                 updateData(result.allProducts, result.wishlistItems || []);
@@ -131,14 +183,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     input.value = result.search || '';
                 });
 
-                // Update body data attributes
+                // Update body data attributes (server returns the sort value as "currentSort")
                 Object.keys(currentFilters).forEach(key => {
-                    body.setAttribute(`data-${key}`, result[key] || '');
+                    const value = key === 'sort' ? result.currentSort : result[key];
+                    body.setAttribute(`data-${key}`, (value && value !== 'default') ? value : '');
                 });
             } else {
                 bookGrid.innerHTML = `<div class="text-lg text-red-600 font-semibold text-center mt-2 col-span-full">${result.errorMessage || 'No products found.'}</div>`;
             }
         } catch (error) {
+            if (requestId !== latestRequestId) return; // a newer request superseded this one — ignore its failure too
             console.error('Filter error:', error.message);
             bookGrid.innerHTML = '<div class="text-lg text-red-600 font-semibold text-center mt-2 col-span-full">Failed to load products. Please try again.</div>';
             showToast("Failed to filter products");
@@ -151,35 +205,25 @@ document.addEventListener('DOMContentLoaded', function () {
         currentFilters.category = result.category || "";
         currentFilters.author = result.author || "";
         currentFilters.price = result.price || "";
+        currentFilters.sort = result.currentSort === "default" ? "" : (result.currentSort || "");
         highlightActiveFilters();
     }
 
     // Highlight active filter links
     function highlightActiveFilters() {
-        document.querySelectorAll('aside a, .filter-sidebar a').forEach(link => {
-            const href = link.getAttribute('href');
+        document.querySelectorAll('.filter-link').forEach(link => {
+            const filterType = link.getAttribute('data-filter');
+            const filterValue = link.getAttribute('data-value');
 
-            // Check if link corresponds to any active filter
             let isActive = false;
 
-            // Category filter
-            if (currentFilters.category && href.includes(`category=${encodeURIComponent(currentFilters.category)}`)) {
-                isActive = true;
-            }
-
-            // All categories (when no category is selected)
-            if (!currentFilters.category && href.includes('/shop?page=') && !href.includes('category=')) {
-                isActive = true;
-            }
-
-            // Author filter
-            if (currentFilters.author && href.includes(`author=${encodeURIComponent(currentFilters.author)}`)) {
-                isActive = true;
-            }
-
-            // Price filter
-            if (currentFilters.price && href.includes(`price=${encodeURIComponent(currentFilters.price)}`)) {
-                isActive = true;
+            if (filterType) {
+                const currentValue = currentFilters[filterType];
+                if (filterValue === 'all' && !currentValue) {
+                    isActive = true;
+                } else if (currentValue && filterValue.trim().toLowerCase() === currentValue.trim().toLowerCase()) {
+                    isActive = true;
+                }
             }
 
             // Apply active styling
@@ -201,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         products.forEach(product => {
             if (!product.isBlocked) {
-                const isInWishlist = wishlistItems.includes(product._id.toString());
+                const isInWishlist = wishlistItems.some(item => (item._id || item).toString() === product._id.toString());
                 const stars = Array(5).fill()
                     .map((_, i) => `<i class="${i < Math.floor(product.rating) ? 'fas' : 'far'} fa-star text-sm"></i>`)
                     .join('');
@@ -255,14 +299,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Update pagination controls
     function updatePagination(totalPages, currentPage, result) {
-        if (!pagination || totalPages <= 0) return;
+        if (!pagination) return;
 
         pagination.innerHTML = '';
+
+        if (totalPages <= 0) return; // no results: leave pagination empty instead of showing stale buttons
         const filters = {
             search: result.search || "",
             category: result.category || "",
             author: result.author || "",
-            price: result.price || ""
+            price: result.price || "",
+            sort: result.currentSort === "default" ? "" : (result.currentSort || "")
         };
 
         // Previous page button
@@ -339,51 +386,3 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
-
-// Add to Cart function
-let isAddToCart = false;
-async function addToCart(productId) {
-    if (isAddToCart) return;
-    isAddToCart = true;
-
-    try {
-        const button = document.querySelector(`button[onclick="addToCart('${productId}')"]`);
-        const originalText = button.innerHTML;
-        // button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        button.disabled = true;
-
-        const response = await fetch(`/cart`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId })
-        });
-
-        const result = await response.json();
-        if (!response.ok) {
-            showToast(result.message || 'Something went wrong');
-        }
-
-        if (result.success) {
-            showToast(result.message, 'success');
-
-            // setTimeout(() => {
-            //     location.reload()
-            // }, 1200);
-        }
-
-    } catch (error) {
-        console.error('Add to cart error:', error);
-        showToast('Something went wrong');
-    } finally {
-        // Restore button state
-        const button = document.querySelector(`button[onclick="addToCart('${productId}')"]`);
-        if (button) {
-            button.innerHTML = 'ADD TO CART';
-            button.disabled = false;
-        }
-
-        // Reset flag after delay
-        setTimeout(() => { isAddToCart = false; }, 1000);
-    }
-}
-

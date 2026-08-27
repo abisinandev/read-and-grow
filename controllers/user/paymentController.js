@@ -1,14 +1,11 @@
 import Razorpay from "razorpay";
 import crypto from "crypto"
-import express from "express"
-import { fstat } from "fs";
 import { validateWebhookSignature } from "razorpay/dist/utils/razorpay-utils.js";
 import { razorpay, readData, writeData } from "../../services/payment.js";
 import Product from "../../models/productSchema.js";
 import Cart from "../../models/cartSchema.js";
 import Order from "../../models/orderSchema.js";
 import Address from "../../models/addressSchema.js";
-const app = express()
 
 
 
@@ -179,11 +176,21 @@ export const retryPayment = async (req, res) => {
         const { orderId } = req.body;
         console.log(orderId, 'retrypayment');
 
-        const order = await Order.findById(orderId);
+        // Scoped to the requesting user — without this, any logged-in user could pay off (and
+        // mark as "paid", decrementing real inventory) any other user's failed order by
+        // guessing its id.
+        const order = await Order.findOne({ _id: orderId, userId: req.user.id });
         if (!order) {
             return res.status(404).json({ success: false, message: "Order not found" });
         }
- 
+
+        // Only a genuinely failed order should be retried — without this guard, calling this
+        // endpoint twice for the same order (double-click, retried request, or replaying an
+        // old request) would decrement stock a second time for an order that's already paid.
+        if (order.paymentStatus !== 'failed') {
+            return res.status(400).json({ success: false, message: "This order is not awaiting payment" });
+        }
+
         for (let item of order.items) {
             const product = await Product.findById(item.productId);
             if (!product) {

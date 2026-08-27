@@ -93,7 +93,7 @@ async function sendVerficationEmail(email, otp) {
     <div class="container">
         <img src="https://via.placeholder.com/120/000000/ff3b3b?text=Read+%26+Grow" alt="Read & Grow Logo" class="logo">
         <div class="header">Your OTP Code</div>
-        <p class="message">Use the code below to verify your email. This OTP is valid for **10 minutes**.</p>
+        <p class="message">Use the code below to verify your email. This OTP is valid for <strong>5 minutes</strong>.</p>
         <div class="otp-box">${otp}</div>
         <p class="message">If you did not request this OTP, please ignore this email or contact support.</p>
         <div class="footer">

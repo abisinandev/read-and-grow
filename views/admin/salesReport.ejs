@@ -16,66 +16,83 @@
         <%- include("../partials/admin/adminSideBar.ejs") %>
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col min-w-0">
         <!-- Header Section -->
-        <header class="bg-white shadow-md p-6">
+        <header class="bg-white shadow-sm p-6 pl-20 md:pl-6">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-gray-800">Sales Report</h1>
-                <button id="sidebar-toggle" class="md:hidden text-gray-600 focus:outline-none">
-                    <i class="fas fa-bars text-2xl"></i>
-                </button>
             </div>
         
             <!-- Filter Container -->
-            <div class="filter-container mt-4 flex flex-col md:flex-row gap-4">
+            <div class="filter-container mt-4 flex flex-col md:flex-row flex-wrap gap-4">
                 <!-- Predefined Filter Buttons -->
                 <div class="filter-button flex gap-2">
-                    <button onclick="filterOrders('daily')" class="filter-btn h-8 px-3 text-sm bg-gray-400 text-white hover:bg-blue-600 transition" data-filter="daily">Daily</button>
-                    <button onclick="filterOrders('weekly')" class="filter-btn h-8 px-3 text-sm bg-gray-400 text-white hover:bg-blue-600 transition" data-filter="weekly">Weekly</button>
-                    <button onclick="filterOrders('monthly')" class="filter-btn h-8 px-3 text-sm bg-gray-400 text-white hover:bg-blue-600 transition" data-filter="monthly">Monthly</button>
-                    <button onclick="filterOrders('yearly')" class="filter-btn h-8 px-3 text-sm bg-gray-400 text-white hover:bg-blue-600 transition" data-filter="yearly">Yearly</button>
+                    <% ['daily','weekly','monthly','yearly'].forEach(f => { %>
+                        <button onclick="filterOrders('<%= f %>')"
+                            class="filter-btn h-8 px-3 text-sm rounded-md transition capitalize <%= filter === f ? 'bg-slate-900 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>"
+                            data-filter="<%= f %>"><%= f %></button>
+                    <% }) %>
                 </div>
-        
+
                 <!-- Custom Date Filter -->
                 <div class="custom-date-filter flex flex-col sm:flex-row gap-2 items-center">
                     <label for="start-date" class="text-sm font-medium text-gray-700">Start Date:</label>
-                    <input type="date" id="start-date" class="h-8 px-2 py-1 border border-gray-300 rounded-md text-sm">
+                    <input type="date" id="start-date" value="<%= startDate %>" class="h-8 px-2 py-1 border border-gray-300 rounded-md text-sm">
                     <label for="end-date" class="text-sm font-medium text-gray-700">End Date:</label>
-                    <input type="date" id="end-date" class="h-8 px-2 py-1 border border-gray-300 rounded-md text-sm">
-                    <button id="custom-filter-btn" class="filter-btn h-8 px-3 text-sm bg-red-400 text-white hover:bg-blue-600 transition">Filter</button>
+                    <input type="date" id="end-date" value="<%= endDate %>" class="h-8 px-2 py-1 border border-gray-300 rounded-md text-sm">
+                    <button id="custom-filter-btn" class="filter-btn h-8 px-3 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition">Filter</button>
                 </div>
-        
+
                 <!-- Download Buttons -->
                 <div class="custom-date-filter flex gap-2">
-                    <button id="download-pdf-btn" class="filter-btn h-8 px-3 text-sm bg-green-500 text-white hover:bg-green-600 transition">PDF</button>
-                    <button id="download-excel-btn" class="filter-btn h-8 px-3 text-sm bg-green-500 text-white hover:bg-green-600 transition">Excel</button>
-                    <button onclick="window.location.href='/admin/sales-report'" class="filter-btn h-8 px-3 text-sm bg-green-500 text-white hover:bg-green-600 transition">Reset</button>
+                    <button id="download-pdf-btn" class="filter-btn h-8 px-3 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition flex items-center gap-1.5">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button id="download-excel-btn" class="filter-btn h-8 px-3 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition flex items-center gap-1.5">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </button>
+                    <button onclick="window.location.href='/admin/sales-report'" class="filter-btn h-8 px-3 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition">Reset</button>
                 </div>
             </div>
         </header>
-        
+
 
         <!-- Main Content -->
         <main class="container mx-auto p-6 flex-1">
             <!-- Summary Stats -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <p class="text-sm text-gray-500">Sales Count</p>
-                    <p id="sales-count" class="text-xl font-semibold text-blue-600"><%= salesCount  %></p>
+                <div class="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-cart-shopping"></i>
+                    </span>
+                    <div>
+                        <p class="text-sm text-gray-500">Sales Count</p>
+                        <p id="sales-count" class="text-xl font-semibold text-gray-900"><%= salesCount  %></p>
+                    </div>
                 </div>
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <p class="text-sm text-gray-500">Total Amount</p>
-                    <p id="total-amount" class="text-xl font-semibold text-blue-600">Rs. <%= Number(totalAmount).toFixed(2) %></p>
+                <div class="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-sack-dollar"></i>
+                    </span>
+                    <div>
+                        <p class="text-sm text-gray-500">Total Amount</p>
+                        <p id="total-amount" class="text-xl font-semibold text-gray-900">Rs. <%= Number(totalAmount).toFixed(2) %></p>
+                    </div>
                 </div>
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <p class="text-sm text-gray-500">Total Discount</p>
-                    <p id="total-discount" class="text-xl font-semibold text-blue-600"><%= (discountedAmount).toFixed(2) %></p>
+                <div class="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-tag"></i>
+                    </span>
+                    <div>
+                        <p class="text-sm text-gray-500">Total After Discount</p>
+                        <p id="total-discount" class="text-xl font-semibold text-gray-900">Rs. <%= (discountedAmount).toFixed(2) %></p>
+                    </div>
                 </div>
             </div>
 
             <!-- Orders Table -->
             <div class="overflow-x-auto">
-                <table class="user-table w-full bg-white shadow-md rounded-lg">
+                <table class="user-table w-full bg-white shadow-sm rounded-xl overflow-hidden">
                     <thead class="bg-gray-200">
                         <tr>
                             <th class="py-3 px-4 text-left text-gray-700">Date</th>
@@ -108,12 +125,21 @@
                     </tbody>
                 </table>
                 <div class="flex justify-center mt-6">
+                    <%
+                      /* Preserve the active filter/date range across pagination clicks — these
+                         hrefs previously only carried page/limit, so clicking a page number
+                         silently reset the report back to "today" and dropped any custom range. */
+                      let pageQuery = '';
+                      if (filter) pageQuery += '&filter=' + encodeURIComponent(filter);
+                      if (startDate) pageQuery += '&startDate=' + encodeURIComponent(startDate);
+                      if (endDate) pageQuery += '&endDate=' + encodeURIComponent(endDate);
+                    %>
                     <nav class="flex justify-center mt-6">
                         <ul class="inline-flex items-center -space-x-px text-sm">
                           <!-- Previous Page -->
                           <% if(page > 1){ %>
                             <li>
-                              <a href="/admin/sales-report?page=<%= page - 1 %>&limit=<%= limit %>" 
+                              <a href="/admin/sales-report?page=<%= page - 1 %>&limit=<%= limit %><%= pageQuery %>"
                                  class="flex items-center justify-center px-3 h-10 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -129,23 +155,23 @@
                               </span>
                             </li>
                           <% } %>
-                      
+
                           <!-- Page Numbers -->
                           <% for(let i = 1; i <= totalPages; i++) { %>
                             <li>
-                              <a href="/admin/sales-report?page=<%= i %>&limit=<%= limit %>" 
-                                 class="flex items-center justify-center px-3 h-10 leading-tight 
-                                        border border-gray-300 
+                              <a href="/admin/sales-report?page=<%= i %>&limit=<%= limit %><%= pageQuery %>"
+                                 class="flex items-center justify-center px-3 h-10 leading-tight
+                                        border border-gray-300
                                         <%= page === i ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-100' %>">
                                 <%= i %>
                               </a>
                             </li>
                           <% } %>
-                      
+
                           <!-- Next Page -->
                           <% if(page < totalPages){ %>
                             <li>
-                              <a href="/admin/sales-report?page=<%= page + 1 %>&limit=<%= limit %>" 
+                              <a href="/admin/sales-report?page=<%= page + 1 %>&limit=<%= limit %><%= pageQuery %>"
                                  class="flex items-center justify-center px-3 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
