@@ -50,14 +50,18 @@ export const salesReport = async (req, res) => {
 
         orders.forEach(order => {
             salesCount += order.items.reduce((acc, item) => acc + item.quantity, 0);
-            totalAmount += parseFloat(order.totalAmount);
-            discountedAmount += parseFloat(order.totalAmount) - parseFloat(order.discount);
+            totalAmount += parseFloat(order.totalAmount || 0);
+
+            discountedAmount += parseFloat(order.totalAmount || 0) - parseFloat(order.discount || 0);
         });
         return res.render('admin/salesReport', {
             orders, salesCount,
             totalAmount: Number(totalAmount),
             discountedAmount: Number(discountedAmount),
-            totalPages, totalOrders, page, limit
+            totalPages, totalOrders, page, limit,
+            filter: filter || '',
+            startDate: startDate || '',
+            endDate: endDate || ''
         })
 
     } catch (error) {
@@ -442,8 +446,8 @@ export const downloadExcelReport = async (req, res) => {
 
         orders.forEach(order => {
             salesCount += order.items.reduce((acc, item) => acc + item.quantity, 0); //tTOTAL ITEMS SOLD
-            totalAmount += parseFloat(order.totalAmount);//TOTAL AMOUNT
-            discountedAmount += parseFloat(order.totalAmount) - parseFloat(order.discount);//DISCOUNT PRICE
+            totalAmount += parseFloat(order.totalAmount || 0);//TOTAL AMOUNT
+            discountedAmount += parseFloat(order.totalAmount || 0) - parseFloat(order.discount || 0);//DISCOUNT PRICE
         });
 
 
@@ -458,8 +462,11 @@ export const downloadExcelReport = async (req, res) => {
         worksheet.addRow(['Total Discount:', discountedAmount]);
         worksheet.addRow([]); // Empty row for spacing
 
-        // Add the header row for the table
-        worksheet.addRow(['Date', 'Order ID', 'Customer', 'Status', 'Payment Method', 'Quantity', 'Total']);
+        // Add the header row for the table — 8 columns now, matching the 8 values pushed
+        // below. This used to be 7 headers for 8 values (an extra order.subTotal snuck in
+        // before order.totalAmount with no header of its own), which shifted every column
+        // after "Quantity" one to the left and left the actual total in an unlabeled column.
+        worksheet.addRow(['Date', 'Order ID', 'Customer', 'Status', 'Payment Method', 'Quantity', 'Subtotal', 'Total']);
 
         // Add data rows
         orders.forEach(order => {

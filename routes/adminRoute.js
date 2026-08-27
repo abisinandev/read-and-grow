@@ -2,27 +2,32 @@ import express from 'express';
 const router = express.Router()
 import adminAuth from "../middlewares/adminAuth.js"
 import {
-    addCategory,
-    addCategoryGet,
-    addProducts,
-    addProductsPost,
     adminLoginGet,
     adminLoginPost,
     adminLogout,
-    blockProduct,
+} from "../controllers/admin/adminController.js"
+import {
     blockUser,
+    renderUserPanel,
+} from "../controllers/admin/userController.js"
+import {
+    addCategory,
+    addCategoryGet,
     categoryManagment,
     deleteCategory,
-    deleteProduct,
     editCategory,
     editCategoryPatch,
+    searchCategory,
+} from "../controllers/admin/categoryController.js"
+import {
+    addProducts,
+    addProductsPost,
+    blockProduct,
+    deleteProduct,
     editProduct,
     editProductsGet,
     renderProductPage,
-    renderUserPanel,
-    searchCategory,
-
-} from "../controllers/admin/adminController.js"
+} from "../controllers/admin/productController.js"
 import upload from '../utils/multer.js';
 import { acceptReturn, getOrderPage, rejectReturn, updateStatus, viewOrder } from '../controllers/admin/orderController.js';
 import { addOffers, deleteOffer, editOffer, renderAddOffers, renderEditOffers, renderOffersPage, selectCategory, selectProduct } from '../controllers/admin/offersController.js';

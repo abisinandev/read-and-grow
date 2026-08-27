@@ -17,7 +17,7 @@
   <!-- Sidebar -->
   <%- include("../partials/admin/adminSideBar.ejs") %>
 
-    <div class="md:ml-[0%] p-4 flex-1 flex flex-col overflow-x-hidden">
+    <div class="p-4 pt-20 md:pt-4 flex-1 flex flex-col overflow-x-hidden min-w-0">
       <div class="flex justify-between items-center mb-4">
         <h1 class="text-2xl font-bold text-gray-800">Order Details - #<%= order.orderId %>
         </h1>
@@ -27,7 +27,7 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-4">
-        <div class="bg-white shadow-md rounded-lg p-6">
+        <div class="bg-white shadow-sm rounded-xl p-6">
           <h2 class="text-lg font-semibold text-gray-800 mb-4">Order Overview</h2>
           <div class="space-y-4">
 
@@ -121,7 +121,7 @@
         </div>
 
 
-        <div class="bg-white shadow-md rounded-lg p-6">
+        <div class="bg-white shadow-sm rounded-xl p-6">
           <h2 class="text-lg font-semibold text-gray-800 mb-4">Customer Information</h2>
 
           <div class="space-y-3">
@@ -141,28 +141,35 @@
 
             <div class="border border-gray-300 rounded-md bg-gray-50 p-4">
               <h3 class="text-sm font-semibold text-gray-700 mb-2">Shipping Address:</h3>
-              <div class="text-sm text-gray-700 space-y-1">
-                <p>
-                  <%= order.addressId.firstName %>
-                    <%= order.addressId.lastName %>
-                </p>
-                <p>
-                  <%= order.addressId.street %>
-                </p>
-                <p>
-                  <%= order.addressId.city %> - <%= order.addressId.pincode %>
-                </p>
-                <p>Phone: <%= order.addressId.phoneNumber %>
-                </p>
-              </div>
+              <% if (order.addressId) { %>
+                <div class="text-sm text-gray-700 space-y-1">
+                  <p>
+                    <%= order.addressId.firstName %>
+                      <%= order.addressId.lastName %>
+                  </p>
+                  <p>
+                    <%= order.addressId.street %>
+                  </p>
+                  <p>
+                    <%= order.addressId.city %> - <%= order.addressId.pincode %>
+                  </p>
+                  <p>Phone: <%= order.addressId.phoneNumber %>
+                  </p>
+                </div>
+              <% } else { %>
+                <!-- The saved address can be deleted by the customer after ordering — this used
+                     to crash the page trying to read firstName/street/etc off null. -->
+                <p class="text-sm text-yellow-700">⚠️ Delivery address information is not available for this order.</p>
+              <% } %>
             </div>
           </div>
         </div>
 
       </div>
 
-      <div class="bg-white shadow-md rounded-lg p-6 mt-4">
+      <div class="bg-white shadow-sm rounded-xl p-6 mt-4">
         <h2 class="text-lg font-semibold text-gray-700 mb-4">Ordered Product</h2>
+        <% if (viewOrder) { %>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="md:col-span-1 w-24">
             <img src="<%= viewOrder.images[0] %>" alt="Book Cover" class="w-full h-auto rounded-lg">
@@ -184,8 +191,8 @@
             <div class="flex justify-between items-center">
               <span class="text-sm font-medium text-gray-600">Status: </span>
               <p class="text-sm text-gray-600">
-                <% let statusClass2="" ; let itemStatus=order.items[index].status; // Get the status from the correct
-                  location switch(itemStatus) { case "Pending" : statusClass2="text-yellow-500 font-semibold" ; break;
+                <% let statusClass2="" ; let itemStatus=order.items[index].status;
+                  switch(itemStatus) { case "Pending" : statusClass2="text-yellow-500 font-semibold" ; break;
                   case "Delivered" : statusClass2="text-green-500 font-semibold" ; break; case "Cancelled" :
                   statusClass2="text-red-500 font-semibold" ; break; case "Returned" :
                   statusClass2="text-purple-500 font-semibold" ; break; default:
@@ -196,51 +203,53 @@
               </p>
             </div>
 
-            <% if(viewOrder.bestOffer){%>
-              <!-- <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-700  ">Discount of product:</span>
-                            <span class="text-sm text-red-600"><%= viewOrder.bestOffer %>%</span>
-                        </div> -->
-              <% } %>
-
-                <!-- <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-600">Acctual price:</span>
-                        <span class="text-sm font-medium text-gray-700">Rs. <%= order.items[index].price %></span>
-                    </div> -->
-
-                <div class="flex justify-between items-center">
-                  <% if(order.items[index].status !=='Returned' && order.items[index].status !=='Cancelled' ){ %>
-                    <span class="text-sm font-bold text-gray-600">Paid amount:</span>
-                    <% }else{%>
-                      <span class="text-sm font-bold text-gray-600">Refunded amount:</span>
-                      <% } %>
-                        <% let paidAmount=(viewOrder?.bestOffer / 100) * order.items[index]?.price || 0 %>
-                          <span class="text-sm font-bold text-green-700">Rs. <%= order.items[index].price %> </span>
-                </div>
-
-                <!-- Accept and Reject Buttons -->
-                <% if(order.items[index].isRequested || order.items[index].isReturned || order.items[index].isCancelled)
-                  { %>
-                  <div class="border border-red-400 bg-red-50 p-3 rounded-lg mt-3">
-                    <div class="flex justify-between items-center">
-                      <span class="font-semibold text-red-700">Reason:</span>
-                      <span class="font-semibold text-red-700">
-                        <%= order.items[index].reason %>
-                      </span>
-                    </div>
-                  </div>
-                  <% } %>
-
-                    <div class="flex justify-end space-x-4 mt-4">
-                      <% if(order.items[index].isRequested) {%>
-                        <button onclick="acceptRequest('<%= order.items[index].productId %>','<%= order._id %>')"
-                          class="px-4 py-2 bg-green-700 text-white text-sm font-semibold hover:bg-green-600">Accept</button>
-                        <button onclick="rejectRequest('<%= order.items[index].productId %>','<%= order._id %>')"
-                          class="px-4 py-2 bg-red-700 text-white text-sm font-semibold  hover:bg-red-600">Reject</button>
-                        <% } %>
-                    </div>
+            <%
+              /* The amount actually charged for this line — price x quantity, minus any
+                 per-line product/category offer discount that was applied at order time
+                 (order.items[index].discountPrice, same field the refund calculations
+                 elsewhere already use). This used to just show the raw unit price ignoring
+                 both quantity and any discount, and always labeled it "Paid amount" even for
+                 a still-Pending, not-yet-paid item. */
+              const lineItem = order.items[index];
+              const lineTotal = lineItem.price * lineItem.quantity;
+              const displayAmount = lineItem.discountPrice > 0 ? lineTotal - lineItem.discountPrice : lineTotal;
+              const isSettled = lineItem.status === 'Returned' || lineItem.status === 'Cancelled';
+              const amountLabel = isSettled ? 'Refunded amount:' : (lineItem.status === 'Delivered' ? 'Paid amount:' : 'Item amount:');
+            %>
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-bold text-gray-600"><%= amountLabel %></span>
+              <span class="text-sm font-bold text-green-700">Rs. <%= displayAmount.toFixed(2) %></span>
+            </div>
           </div>
         </div>
+        <% } else { %>
+          <!-- The product this item refers to has since been deleted from the catalog — this
+               used to crash trying to read images/name/category off null. -->
+          <p class="text-sm text-gray-500 italic">This product is no longer available in the catalog.</p>
+        <% } %>
+
+        <!-- Accept and Reject Buttons — about the ORDER ITEM, not the product, so these still
+             work even when the product above is gone. -->
+        <% if(order.items[index].isRequested || order.items[index].isReturned || order.items[index].isCancelled)
+          { %>
+          <div class="border border-red-400 bg-red-50 p-3 rounded-lg mt-3">
+            <div class="flex justify-between items-center">
+              <span class="font-semibold text-red-700">Reason:</span>
+              <span class="font-semibold text-red-700">
+                <%= order.items[index].reason %>
+              </span>
+            </div>
+          </div>
+          <% } %>
+
+            <div class="flex justify-end space-x-4 mt-4">
+              <% if(order.items[index].isRequested) {%>
+                <button onclick="acceptRequest('<%= order.items[index].productId %>','<%= order._id %>')"
+                  class="px-4 py-2 rounded-lg bg-green-700 text-white text-sm font-semibold hover:bg-green-600">Accept</button>
+                <button onclick="rejectRequest('<%= order.items[index].productId %>','<%= order._id %>')"
+                  class="px-4 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold hover:bg-red-600">Reject</button>
+                <% } %>
+            </div>
       </div>
 
     </div>

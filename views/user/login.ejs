@@ -4,89 +4,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Read & Grow login</title>
+    <title>Login - REad & GroW</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/js/user/userLogin.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-    <!-- jQuery Validation Plugin -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
 </head>
 
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-[30px] shadow-lg w-96">
-        <h2 class="text-2xl font-semibold text-center mb-6">Login</h2>
-
-        <form class="space-y-4" id="form">
-            <div>
-                <input type="text" placeholder="Username or email" id="username"
-                    class="w-full px-4 py-2 rounded-[15px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500">
-            </div>
-
-            <div class="relative">
-                <input type="password" placeholder="Password" id="password"
-                    class="w-full px-4 py-2 rounded-[15px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 pr-10">
-                <span class="password-toggle-icon absolute inset-y-0 right-3 flex items-center cursor-pointer">
-                    <i class="fas fa-eye" data-target="password"></i>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-sm">
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="bg-red-600 px-8 py-7 text-center">
+                <span class="inline-flex w-11 h-11 rounded-xl bg-white/15 items-center justify-center mb-2">
+                    <i class="fas fa-book-open text-white text-base"></i>
                 </span>
+                <h1 class="text-white text-lg font-semibold tracking-tight">REad &amp; GroW</h1>
+                <p class="text-red-100 text-xs mt-1">Welcome back, reader.</p>
             </div>
 
+            <form class="p-8 space-y-4" id="form">
+                <h2 class="text-lg font-semibold text-gray-800 mb-1">Sign in</h2>
+                <p class="text-sm text-gray-500 mb-4">Log in to pick up right where you left off.</p>
 
-            <div class="flex justify-between text-[12px] text-gray-600">
-                <p>
-                    If you don't have an account?
-                    <a href="/signup" class="text-red-600 hover:underline">Signup</a>
-                </p>
-                <a href="/email-verify" class="text-red-600 hover:underline">Forgot password?</a>
-            </div>
+                <div>
+                    <label for="username" class="block text-xs font-medium text-gray-600 mb-1">Username or email</label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm"></i>
+                        <input type="text" placeholder="Username or email" id="username" name="username" required
+                            autocomplete="username"
+                            class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                    </div>
+                </div>
 
-            <button type="submit" id="loginButton"
-                class="w-full bg-red-600 text-white py-2 rounded-[20px]  hover:bg-red-700 transition duration-300">
-                Login
-            </button>
+                <div>
+                    <label for="password" class="block text-xs font-medium text-gray-600 mb-1">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-key absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm"></i>
+                        <input type="password" placeholder="Password" id="password" name="password" required
+                            autocomplete="current-password"
+                            class="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                        <button type="button" id="togglePassword" tabindex="-1" data-target="password"
+                            class="password-toggle-icon absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                            aria-label="Show password">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
 
-        </form>
+                <div class="flex justify-between items-center text-xs text-gray-500 pt-1">
+                    <p>New here? <a href="/signup" class="text-red-600 font-medium hover:underline">Create an account</a></p>
+                    <a href="/email-verify" class="text-red-600 hover:underline">Forgot password?</a>
+                </div>
 
-        <div class="flex justify-center mt-2 ">
-            <a href="/auth/google"
-                class="w-full border-[1px] border-gray-300 text-white py-2 rounded-[20px] hover:bg-gray-300 transition duration-300 flex items-center justify-center gap-2">
-                <img src="https://img.icons8.com/?size=100&id=17949&format=png&color=ffffff" alt="Google Logo"
-                    class="h-6">
-                <span class=" text-black">Sign up with Google</span>
+                <button type="submit" id="loginButton"
+                    class="w-full bg-red-600 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-red-700 transition duration-200 mt-2 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <i id="loginButtonSpinner" class="fas fa-circle-notch fa-spin hidden"></i>
+                    <span id="loginButtonText">Login</span>
+                </button>
+
+                <div class="flex items-center gap-3 py-1">
+                    <div class="h-px bg-gray-200 flex-1"></div>
+                    <span class="text-[11px] text-gray-400 uppercase tracking-wide">or</span>
+                    <div class="h-px bg-gray-200 flex-1"></div>
+                </div>
+
+                <a href="/auth/google"
+                    class="w-full border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 transition duration-200 flex items-center justify-center gap-2 text-sm font-medium">
+                    <img src="https://img.icons8.com/?size=100&id=17949&format=png&color=000000" alt="Google" class="h-5 w-5">
+                    Continue with Google
+                </a>
+            </form>
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="/" class="text-xs text-gray-500 hover:text-gray-700 inline-flex items-center gap-1.5">
+                <i class="fas fa-arrow-left text-[10px]"></i> Back to REad &amp; GroW
             </a>
         </div>
     </div>
 
-</body>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
-    integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<!-- jQuery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.21.0/jquery.validate.min.js"
-    integrity="sha512-KFHXdr2oObHKI9w4Hv1XPKc898mE4kgYx58oqsc/JqqdLMDI4YjOLzom+EMlW8HFUd0QfjfAvxSL6sEq/a42fQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
-<script>
-    document.querySelectorAll('.password-toggle-icon i').forEach(toggle => {
-        toggle.addEventListener('click', function () {
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script>
+        document.getElementById('togglePassword').addEventListener('click', function () {
             const targetId = this.getAttribute('data-target');
             const inputField = document.getElementById(targetId);
-
-            if (inputField.type === 'password') {
-                inputField.type = 'text';
-                this.classList.remove('fa-eye');
-                this.classList.add('fa-eye-slash');
-            } else {
-                inputField.type = 'password';
-                this.classList.remove('fa-eye-slash');
-                this.classList.add('fa-eye');
-            }
+            const icon = this.querySelector('i');
+            const isHidden = inputField.type === 'password';
+            inputField.type = isHidden ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !isHidden);
+            icon.classList.toggle('fa-eye-slash', isHidden);
+            this.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
         });
-    });
-
-</script>
+    </script>
+</body>
 
 </html>

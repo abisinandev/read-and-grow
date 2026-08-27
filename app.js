@@ -20,8 +20,6 @@ import methodOverride from "method-override"
 
 import { CONFIG } from "./utils/constants/envConfig.js";
 
-// ENV FILE CONFIGURATION MOVED TO envConfig.js
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

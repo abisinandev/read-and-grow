@@ -8,9 +8,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const phoneNumber = document.getElementById("phoneNumber")
     const confirmPassword = document.getElementById("confirmPassword")
     const password = document.getElementById("password")
-    const loginButton = document.getElementById("loginButton")
     const referalCode = document.getElementById('referalCode')
-    console.log(referalCode)
+    const signupButton = document.getElementById("signupButton")
+    const signupButtonSpinner = document.getElementById("signupButtonSpinner")
+    const signupButtonText = document.getElementById("signupButtonText")
+
+    function setLoading(isLoading) {
+        if (!signupButton) return
+        signupButton.disabled = isLoading
+        if (signupButtonSpinner) signupButtonSpinner.classList.toggle('hidden', !isLoading)
+        if (signupButtonText) signupButtonText.textContent = isLoading ? 'Signing up...' : 'Sign Up'
+    }
 
     const notyf = new Notyf({
         duration: 3000,
@@ -77,12 +85,12 @@ document.addEventListener('DOMContentLoaded', function () {
         let isValid = true
         if (!isRequired(username.value)) {
             isValid = false
-            showError(username, "User name is requried")
+            showError(username, "Username is required")
         }
 
-        if(username.value.length < 3){
-            isValid = false,
-            showError(username,'Username must be 3 charecters')
+        if (username.value.length < 3) {
+            isValid = false
+            showError(username, 'Username must be at least 3 characters')
         }
 
         if (!isRequired(email.value)) {
@@ -104,15 +112,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!isRequired(password.value)) {
             isValid = false
-            showError(password, "Passwrod is required")
+            showError(password, "Password is required")
         } else if (!isStrongPassword(password.value)) {
             isValid = false
-            showError(password, 'Password includes 6 charecters with strong keys')
+            showError(password, 'Password must be at least 6 characters and include a letter and a number')
         }
 
         if (!isRequired(confirmPassword.value)) {
             isValid = false
-            showError(confirmPassword, "Confirm passwrod is required")
+            showError(confirmPassword, "Please confirm your password")
         } else if (password.value !== confirmPassword.value) {
             isValid = false
             showError(confirmPassword, "Password is not matching")
@@ -122,6 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
  
         const url = "/signup"
+        setLoading(true)
 
         try {
             const response = await fetch(url, {
@@ -132,33 +141,40 @@ document.addEventListener('DOMContentLoaded', function () {
                     email: email.value,
                     phoneNumber: phoneNumber.value,
                     password: password.value,
-                    confirmPassword: confirmPassword.value
-                    ,referralCode:referalCode.value
+                    confirmPassword: confirmPassword.value,
+                    referralCode: referalCode.value
                 })
             })
 
- 
             const result = await response.json()
 
             if (!response.ok) {
                 notyf.error(result.message)
+                setLoading(false)
                 return
             }
 
             console.log(result, 'result fetch')
 
+            // The redirect used to fire unconditionally even if result.success came back
+            // false — harmless today since the backend never returns 200 with success:false,
+            // but a page navigating away on a failure response it never actually checked was
+            // one bad response shape away from silently sending someone to a broken page.
             if (result.success) {
-                localStorage.setItem("otpToken",result?.token)
+                localStorage.setItem("otpToken", result?.token)
                 notyf.success(result.message)
+                setTimeout(() => {
+                    window.location.href = result.redirect
+                }, 1000);
+            } else {
+                notyf.error(result.message || "Something went wrong. Please try again.")
+                setLoading(false)
             }
-            setTimeout(() => {
-                window.location.href = result.redirect
-            }, 1000);
-
-
 
         } catch (error) {
-            console.log("Login error : ", error.message)
+            console.log("Signup error : ", error.message)
+            notyf.error("Something went wrong. Please check your connection and try again.")
+            setLoading(false)
         }
 
     })

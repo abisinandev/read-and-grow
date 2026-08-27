@@ -12,11 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script src="/js/admin/userPanal.js"></script>
     <style>
-        @media (max-width: 768px) {
-            #sidebar { width: 100%; height: auto; position: relative; }
-            .main-content { margin-left: 0 !important; padding: 1rem; }
-            .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        }
+        /* Unconditional: gating this to mobile only let the table escape its container and
+           scroll the whole <body> horizontally at desktop widths instead. */
+        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         body { overscroll-behavior: none; margin: 0; }
         .container-fluid { display: flex; width: 100%; min-height: 100vh; }
@@ -29,19 +27,23 @@
         <%- include("../partials/admin/adminSideBar.ejs") %>
 
         <!-- Main Content -->
-        <div class="flex-1 main-content p-6" style="margin-left: calc(0% + 0px);">
-            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6">
+        <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 min-w-0">
+            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6 rounded-xl">
                 <div class="flex justify-between items-center px-6 py-4">
                     <h1 class="text-2xl font-semibold text-gray-800">User Management</h1>
                 </div>
             </header>
 
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="bg-white rounded-xl shadow-sm p-6">
                 <!-- Header -->
-                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <!-- flex-wrap on both levels: the fixed-width search box plus Search and Reset
+                     buttons didn't fit one row between the sm and lg breakpoints (sidebar static
+                     at 256px), and pushed the whole page into a horizontal scrollbar instead of
+                     wrapping. -->
+                <div class="flex flex-col sm:flex-row flex-wrap justify-between items-center mb-6 gap-4">
                     <h2 class="text-xl font-semibold text-gray-800">Users</h2>
-                    <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                        <form id="formData" class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                    <div class="flex flex-col sm:flex-row flex-wrap items-center gap-4 w-full sm:w-auto">
+                        <form id="formData" class="flex flex-col sm:flex-row flex-wrap items-center gap-4 w-full sm:w-auto">
                             <div class="relative w-full sm:w-64">
                                 <input type="text" name="searchInput" placeholder="Search by name or email"
                                     class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -72,6 +74,11 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
+                            <% if (allUsers.length === 0) { %>
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">No users found</td>
+                                </tr>
+                            <% } %>
                             <% for(let i=0; i<allUsers.length; i++ ){%>
                                 <% if (allUsers[i].role === 'user') { %>
                                     <tr class="hover:bg-gray-50 transition">
@@ -85,7 +92,7 @@
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <button onclick="isBlock('/admin/blockUser/<%= allUsers[i]._id %>', this)"
+                                            <button onclick="isBlock('/admin/blockUser/<%= allUsers[i]._id %>')"
                                                 class="px-4 py-2 rounded text-white <%= allUsers[i].status ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700' %> transition">
                                                 <%= allUsers[i].status ? 'Unblock' : 'Block' %>
                                             </button>
@@ -100,11 +107,11 @@
                 <!-- Pagination -->
                 <div class="flex justify-center mt-6">
                     <nav class="flex justify-center mt-6">
-                        <ul class="inline-flex items-center -space-x-px text-sm">
+                        <ul id="usersPaginationList" class="inline-flex items-center -space-x-px text-sm">
                           <!-- Previous Page -->
                           <% if(page > 1){ %>
                             <li>
-                              <a href="/admin/users?page=<%= page - 1 %>&limit=<%= limit %>" 
+                              <a href="/admin/users?page=<%= page - 1 %>&limit=<%= limit %><%= query ? '&query=' + encodeURIComponent(query) : '' %>"
                                  class="flex items-center justify-center px-3 h-10 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -124,19 +131,19 @@
                           <!-- Page Numbers -->
                           <% for(let i = 1; i <= totalPages; i++) { %>
                             <li>
-                              <a href="/admin/users?page=<%= i %>&limit=<%= limit %>" 
-                                 class="flex items-center justify-center px-3 h-10 leading-tight 
-                                        border border-gray-300 
+                              <a href="/admin/users?page=<%= i %>&limit=<%= limit %><%= query ? '&query=' + encodeURIComponent(query) : '' %>"
+                                 class="flex items-center justify-center px-3 h-10 leading-tight
+                                        border border-gray-300
                                         <%= page === i ? 'bg-blue-500 text-white' : 'bg-white text-gray-500 hover:bg-gray-100' %>">
                                 <%= i %>
                               </a>
                             </li>
                           <% } %>
-                      
+
                           <!-- Next Page -->
                           <% if(page < totalPages){ %>
                             <li>
-                              <a href="/admin/users?page=<%= page + 1 %>&limit=<%= limit %>" 
+                              <a href="/admin/users?page=<%= page + 1 %>&limit=<%= limit %><%= query ? '&query=' + encodeURIComponent(query) : '' %>"
                                  class="flex items-center justify-center px-3 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -181,7 +188,7 @@
                     const data = await response.json();
                     console.log(data)
                     if (response.ok && data.success) {
-                        updateTable(data.allUsers);
+                        updateTable(data.allUsers, data.page);
                         updatePagination(data.totalPages, data.page);
                         history.pushState({}, '', url); // Update URL without reload
                     } else {
@@ -207,7 +214,7 @@
                 }
             });
  
-            function updateTable(users) {
+            function updateTable(users, currentPage) {
                 const tbody = document.querySelector('tbody');
                 tbody.innerHTML = '';
                 if (!users || users.length === 0) {
@@ -215,33 +222,38 @@
                     return;
                 }
 
-                users.forEach(user => {
-                    if (user.role === 'user') {
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-gray-50 transition">
-                                <td class="px-6 py-4 whitespace-nowrap">${user.id}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">${user.username}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">${user.email}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">${user.orderCount || 0}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-3 py-1 rounded-full text-sm ${user.role === 'Admin' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'}">
-                                        ${user.role}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <button onclick="isBlock('/admin/blockUser/${user._id}', this)"
-                                        class="px-4 py-2 rounded-lg text-white ${user.isBlocked ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} transition">
-                                        ${user.isBlocked ? 'Unblock' : 'Block'}
-                                    </button>
-                                </td>
-                            </tr>`;
-                    }
+                // The server's /admin/users response never included `.id` or `.isBlocked` —
+                // it returns `._id` and `.status` (see renderUserPanel) — so these previously
+                // rendered as literal "undefined", and every row's Block/Unblock button showed
+                // the wrong label/color (always "Block", red) until the next full page load.
+                users.forEach((user, idx) => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 whitespace-nowrap">${(currentPage - 1) * limit + idx + 1}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${user.username}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${user.email}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${user.orderCount || 0}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-3 py-1 rounded-full text-sm ${user.role === 'Admin' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'}">
+                                    ${user.role}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <button onclick="isBlock('/admin/blockUser/${user._id}')"
+                                    class="px-4 py-2 rounded-lg text-white ${user.status ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} transition">
+                                    ${user.status ? 'Unblock' : 'Block'}
+                                </button>
+                            </td>
+                        </tr>`;
                 });
             }
 
-   
+
             function updatePagination(totalPages, currentPage) {
-                const nav = document.querySelector('.flex.space-x-2');
+                // Was `.flex.space-x-2`, which matches nothing in the actual pagination markup
+                // (`<ul id="usersPaginationList" class="inline-flex items-center ...">`) — so
+                // pagination silently stopped updating after any AJAX search.
+                const nav = document.getElementById('usersPaginationList');
                 nav.innerHTML = '';
 
                 if (currentPage > 1) {

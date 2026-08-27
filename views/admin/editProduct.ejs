@@ -24,36 +24,18 @@
             min-height: 100vh;
             width: 100%;
         }
-        .main-content {
-            flex: 1;
-            transition: margin-left 0.3s;
-        }
-        @media (max-width: 768px) {
-            #sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-            }
-            .main-content {
-                margin-left: 0 !important;
-                padding: 1rem;
-            }
-            .max-w-2xl {
-                max-width: 100%;
-            }
-        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
     <div class="container-fluid">
         <%- include("../partials/admin/adminSideBar.ejs") %>
-        <div class="main-content p-6" style="margin-left: calc(0% + 0px);">
-            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6">
+        <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 min-w-0">
+            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6 rounded-xl">
                 <div class="flex justify-between items-center px-6 py-4">
                     <h1 class="text-2xl font-semibold text-gray-800">Edit Products</h1>
                 </div>
             </header>
-            <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
+            <div class="bg-white rounded-xl shadow-sm p-6 max-w-2xl mx-auto">
                 <form id="editProductForm" class="space-y-6" enctype="multipart/form-data">
                     <input type="hidden" id="productId" name="productId" value="<%= product._id %>">
                     <div>
@@ -85,7 +67,7 @@
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label for="price" class="block text-sm font-medium text-gray-700">Price ($)</label>
+                            <label for="price" class="block text-sm font-medium text-gray-700">Price (Rs.)</label>
                             <input type="number" id="price" name="price" step="0.01" min="0" required value="<%= product.price %>"
                                 class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         </div>
@@ -234,7 +216,7 @@
                 if (!category) return showToast("Category is required");
                 if (!author) return showToast("Author is required");
                 if (!price || isNaN(price) || Number(price) <= 0) return showToast("Price must be a positive number");
-                if (!stock || isNaN(stock) || Number(stock) < 0) return showToast("Stock must be a non-negative number");
+                if (!stock || isNaN(stock) || Number(stock) < 0 || !Number.isInteger(Number(stock))) return showToast("Stock must be a non-negative whole number");
                 if (!productId) return showToast("Product ID is required");
 
                 const formData = new FormData();
@@ -245,8 +227,10 @@
                 formData.append('price', price);
                 formData.append('stock', stock);
                 formData.append('productId', productId);
+                
+                const imagePlan = [];
+                let hasAnyImage = false;
 
-                // Append new images and existing image URLs
                 for (let i = 1; i <= 3; i++) {
                     const input = document.getElementById(`image${i}`);
                     const existingImageInput = document.getElementById(`existingImage${i}`);
@@ -255,11 +239,17 @@
                         const extension = input.files[0].name.split('.').pop().toLowerCase();
                         if (!validImageTypes.includes(extension)) return showToast(`${extension} is an invalid file type`);
                         formData.append('images', input.files[0]);
+                        imagePlan.push('new');
+                        hasAnyImage = true;
                     } else if (existingImageInput.value) {
-                        // Append existing image URL if no new image is uploaded
-                        formData.append('existingImages', existingImageInput.value);
+                        imagePlan.push(existingImageInput.value);
+                        hasAnyImage = true;
                     }
+                    // else: this slot was cleared/removed — contributes nothing to the plan
                 }
+
+                if (!hasAnyImage) return showToast('At least one image is required');
+                formData.append('imagePlan', JSON.stringify(imagePlan));
 
                 try {
                     Swal.fire({ title: 'Saving...', text: 'Please wait', allowOutsideClick: false, didOpen: () => Swal.showLoading() });

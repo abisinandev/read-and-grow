@@ -5,155 +5,159 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Offer - Read & Grow</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <style>
+        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        body { overscroll-behavior: none; margin: 0; }
+        .container-fluid { display: flex; width: 100%; min-height: 100vh; }
+    </style>
 </head>
-<body class="bg-gray-100 flex">
-    <!-- Sidebar -->
-    <%- include("../partials/admin/adminSideBar.ejs") %>
+<body class="bg-gray-50 text-gray-800 font-sans">
+    <div class="container-fluid">
+        <!-- Sidebar -->
+        <%- include("../partials/admin/adminSideBar.ejs") %>
 
-    <!-- Main Content -->
-    <div class="w-full md:w-[84%] p-8">
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold">Edit Offer</h1>
-                <a href="/admin/offers" class="text-gray-600 hover:text-gray-900 flex items-center">
-                    <i data-feather="arrow-left" class="w-5 h-5 mr-2"></i> Go back
-                </a>
-            </div>
-
-            <!-- Edit Offer Form -->
-            <form id="editOfferForm" class="space-y-4">
-                <!-- Offer Name -->
-                <div>
-                    <label for="offerName" class="block text-gray-700 font-semibold mb-1">Offer Name</label>
-                    <input 
-                        type="text" 
-                        id="offerName" 
-                        name="offerName" 
-                        value="<%= offer.offerName %>"
-                        placeholder="Enter Offer Name"
-                        class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                        maxlength="100"
-                    >
-                </div>
-            
-                <!-- Offer Type and Target Selection -->
-                <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
-                    <!-- Offer Type -->
-                    <div class="w-full">
-                        <label for="applyTo" class="block text-gray-700 font-semibold mb-1">Offer Type</label>
-                        <select 
-                            id="applyTo" 
-                            name="offerType"
-                            class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500"
-                            required
-                            >   
-                            <option value="" disabled>Select Offer Type</option>
-                            <option value="Product" <%= offer.offerType === 'Product' ? 'selected' : '' %>>Product</option>
-                            <option value="Category" <%= offer.offerType === 'Category' ? 'selected' : '' %>>Category</option>
-                        </select>
-                    </div>
-            
-                    <!-- Dynamic Dropdown for Product/Category -->
-                    <div class="w-full">
-                        <label for="targetSelection" class="block text-gray-700 font-semibold mb-1">Select Target</label>
-                        <select 
-                            id="targetSelection" 
-                            name="targetSelection"
-                            class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500"
-                            required
-                        >
-                            <option value="" disabled>Select a target</option>
-                        </select> 
-                    </div>
-                </div>
-            
-                <!-- Discount Percentage -->
-                <div>
-                    <label for="discountPercentage" class="block text-gray-700 font-semibold mb-1">Discount Percentage</label>
-                    <input 
-                        type="number" 
-                        id="discountPercentage" 
-                        name="discountPercentage" 
-                        min="0" 
-                        max="100" 
-                        step="1"
-                        value="<%= offer.discountPercentage %>"
-                        placeholder="Enter Discount Percentage (0-100)"
-                        class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                    >
-                </div>
-            
-                <!-- Valid From Date -->
-                <div>
-                    <label for="validFrom" class="block text-gray-700 font-semibold mb-1">Valid From</label>
-                    <input 
-                        type="date" 
-                        id="validFrom" 
-                        name="validFrom" 
-                        min="2025-03-27"
-                        value="<%= new Date(offer.validFrom).toISOString().split('T')[0] %>"
-                        class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                    >
-                </div>
-            
-                <!-- Valid To Date -->
-                <div>
-                    <label for="validTo" class="block text-gray-700 font-semibold mb-1">Valid To</label>
-                    <input 
-                        type="date" 
-                        id="validTo" 
-                        name="validTo" 
-                        min="2025-03-27"
-                        value="<%= new Date(offer.validTo).toISOString().split('T')[0] %>"
-                        class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                    >
-                </div>
-            
-                <!-- Status Checkbox -->
-                <div>
-                    <label class="inline-flex items-center cursor-pointer">
-                        <input 
-                            type="checkbox" 
-                            id="status" 
-                            name="status" 
-                            class="sr-only peer" 
-                            <%= offer.status ? 'checked' : '' %>
-                        >
-                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        <span class="ml-3 text-sm font-medium text-gray-900">Status (Active)</span>
-                    </label>
-                </div>
-            
-                <!-- Action Buttons -->
-                <div class="flex justify-end space-x-3 mt-6">
-                    <a 
-                        href="/admin/offers" 
-                        class="bg-pink-400 text-white px-4 py-2 rounded hover:bg-pink-500 transition"
-                    >
-                        Cancel
+        <!-- Main Content -->
+        <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 min-w-0">
+            <header class="bg-white shadow-sm sticky top-0 z-10 mb-6 rounded-xl">
+                <div class="flex justify-between items-center px-6 py-4">
+                    <h1 class="text-2xl font-semibold text-gray-800">Edit Offer</h1>
+                    <a href="/admin/offers" class="text-gray-600 hover:text-gray-900 flex items-center text-sm">
+                        <i class="fas fa-arrow-left mr-2"></i> Go back
                     </a>
-                    <button
-                        type="submit"
-                        class="bg-[#4A2C2A] text-white px-4 py-2 rounded hover:bg-[#3A1F1D] transition"
-                    >
-                        UPDATE OFFER
-                    </button>
                 </div>
-            </form>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm p-6 max-w-2xl mx-auto">
+                <!-- Edit Offer Form -->
+                <form id="editOfferForm" class="space-y-6">
+                    <!-- Offer Name -->
+                    <div>
+                        <label for="offerName" class="block text-sm font-medium text-gray-700 mb-1">Offer Name</label>
+                        <input
+                            type="text"
+                            id="offerName"
+                            name="offerName"
+                            value="<%= offer.offerName %>"
+                            placeholder="e.g. Onam Special"
+                            class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            required
+                            maxlength="100"
+                        >
+                    </div>
+
+                    <!-- Offer Type and Target Selection -->
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <!-- Offer Type -->
+                        <div class="w-full">
+                            <label for="applyTo" class="block text-sm font-medium text-gray-700 mb-1">Offer Type</label>
+                            <select
+                                id="applyTo"
+                                name="offerType"
+                                class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                required
+                            >
+                                <option value="" disabled>Select Offer Type</option>
+                                <option value="Product" <%= offer.offerType === 'Product' ? 'selected' : '' %>>Product</option>
+                                <option value="Category" <%= offer.offerType === 'Category' ? 'selected' : '' %>>Category</option>
+                            </select>
+                        </div>
+
+                        <!-- Dynamic Dropdown for Product/Category -->
+                        <div class="w-full">
+                            <label for="targetSelection" class="block text-sm font-medium text-gray-700 mb-1">Select Target</label>
+                            <select
+                                id="targetSelection"
+                                name="targetSelection"
+                                class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                                required
+                            >
+                                <option value="" disabled>Select a target</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Discount Percentage -->
+                    <div>
+                        <label for="discountPercentage" class="block text-sm font-medium text-gray-700 mb-1">Discount Percentage</label>
+                        <input
+                            type="number"
+                            id="discountPercentage"
+                            name="discountPercentage"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value="<%= offer.discountPercentage %>"
+                            placeholder="0 - 100"
+                            class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            required
+                        >
+                    </div>
+
+                    <!-- Valid From / Valid To -->
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="w-full">
+                            <label for="validFrom" class="block text-sm font-medium text-gray-700 mb-1">Valid From</label>
+                            <input
+                                type="date"
+                                id="validFrom"
+                                name="validFrom"
+                                value="<%= new Date(offer.validFrom).toISOString().split('T')[0] %>"
+                                class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                required
+                            >
+                        </div>
+                        <div class="w-full">
+                            <label for="validTo" class="block text-sm font-medium text-gray-700 mb-1">Valid To</label>
+                            <input
+                                type="date"
+                                id="validTo"
+                                name="validTo"
+                                value="<%= new Date(offer.validTo).toISOString().split('T')[0] %>"
+                                class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Status Toggle -->
+                    <div>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                id="status"
+                                name="status"
+                                class="sr-only peer"
+                                <%= offer.status ? 'checked' : '' %>
+                            >
+                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                            <span class="ml-3 text-sm font-medium text-gray-900">Status (Active)</span>
+                        </label>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                        <a
+                            href="/admin/offers"
+                            class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-center"
+                        >
+                            Cancel
+                        </a>
+                        <button
+                            type="submit"
+                            class="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition"
+                        >
+                            <i class="fas fa-check mr-2"></i>Update Offer
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
-        // Initialize Feather icons
-        feather.replace();
-
         // Get form elements
         const applyToSelect = document.getElementById('applyTo');
         const targetSelection = document.getElementById('targetSelection');
@@ -170,46 +174,38 @@
         const currentOffer = {
             id: '<%= offer._id %>',
             offerType: '<%= offer.offerType %>',
-            productId: '<%= offer.productId ? offer.productId._id : '' %>',
-            categoryId: '<%= offer.categoryId ? offer.categoryId._id : '' %>'
+            productId: '<%= offer.productId ? offer.productId._id : "" %>',
+            categoryId: '<%= offer.categoryId ? offer.categoryId._id : "" %>'
         };
 
-        // Enhanced data fetching function
         async function fetchData() {
             try {
-                // Fetch products
                 const productsResponse = await fetch('/admin/select-product', {
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const productResult = await productsResponse.json();
-                
+
                 if (!productResult.success) {
-                    console.error('Product fetch error:', productResult);
                     showToast(`Failed to fetch products: ${productResult.message || 'Unknown error'}`, 'error');
                     products = [];
                 } else {
                     products = productResult.product || [];
-                    console.log('Fetched Products:', products);
                 }
 
-                // Fetch categories
                 const categoriesResponse = await fetch('/admin/select-category', {
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const categoriesResult = await categoriesResponse.json();
-                
+
                 if (!categoriesResult.success) {
-                    console.error('Category fetch error:', categoriesResult);
                     showToast(`Failed to fetch categories: ${categoriesResult.message || 'Unknown error'}`, 'error');
                     categories = [];
                 } else {
                     categories = categoriesResult.categories || [];
-                    console.log('Fetched Categories:', categories);
                 }
 
-                // Update dropdown after data is fetched
                 updateTargetSelection();
             } catch (error) {
                 console.error('Complete data fetch error:', error);
@@ -217,32 +213,21 @@
             }
         }
 
-        // Enhanced target selection update function
         function updateTargetSelection() {
             const offerType = applyToSelect.value;
             targetSelection.innerHTML = '<option value="" disabled>Select an option</option>';
-            
-            console.log('Updating target selection. Offer Type:', offerType);
-            console.log('Products:', products);
-            console.log('Categories:', categories);
 
             if (offerType === 'Product') {
                 if (products.length === 0) {
-                    console.warn('No products available');
                     showToast('No products found', 'error');
                     return;
                 }
-                
                 products.forEach(product => {
-                    if (!product || !product._id || !product.name) {
-                        console.warn('Invalid product:', product);
-                        return;
-                    }
+                    if (!product || !product._id || !product.name) return;
                     const option = document.createElement('option');
                     option.value = product._id;
                     option.textContent = product.name;
                     option.className = 'text-gray-700 bg-white';
-                    // Pre-select the current product if it matches
                     if (currentOffer.offerType === 'Product' && product._id === currentOffer.productId) {
                         option.selected = true;
                     }
@@ -250,21 +235,15 @@
                 });
             } else if (offerType === 'Category') {
                 if (categories.length === 0) {
-                    console.warn('No categories available');
                     showToast('No categories found', 'error');
                     return;
                 }
-                
                 categories.forEach(category => {
-                    if (!category || !category._id || !category.categoryName) { // Updated to use 'name'
-                        console.warn('Invalid category:', category);
-                        return;
-                    }
+                    if (!category || !category._id || !category.categoryName) return;
                     const option = document.createElement('option');
                     option.value = category._id;
-                    option.textContent = category.categoryName; // Updated to use 'name'
+                    option.textContent = category.categoryName;
                     option.className = 'text-gray-700 bg-white';
-                    // Pre-select the current category if it matches
                     if (currentOffer.offerType === 'Category' && category._id === currentOffer.categoryId) {
                         option.selected = true;
                     }
@@ -272,12 +251,10 @@
                 });
             }
 
-            // Enable/disable based on selection
             targetSelection.disabled = offerType ? false : true;
         }
 
-        // Add input validations
-        discountPercentageInput.addEventListener('input', function() {
+        discountPercentageInput.addEventListener('input', function () {
             const value = parseInt(this.value);
             if (isNaN(value) || value < 0) {
                 this.value = 0;
@@ -286,19 +263,24 @@
             }
         });
 
-        // Set min date for date inputs
-        const today = new Date('2025-03-27').toISOString().split('T')[0]; // Use the current date (March 28, 2025)
-        validFromInput.setAttribute('min', today);
-        validToInput.setAttribute('min', today);
+        // Min date for the date pickers must be TODAY (this was hardcoded to a fixed past date,
+        // "2025-03-27", so the picker never actually reflected the real current date). But an
+        // offer being edited may already have started — clamping min to today would then make
+        // its own saved validFrom value fail the browser's built-in date-range validation,
+        // forcing the admin to change the start date just to save any other field. So the min
+        // is whichever is earlier: today, or the date the offer already started on.
+        const todayStr = new Date().toISOString().split('T')[0];
+        const existingValidFrom = validFromInput.value;
+        const minFrom = existingValidFrom && existingValidFrom < todayStr ? existingValidFrom : todayStr;
+        validFromInput.setAttribute('min', minFrom);
+        validToInput.setAttribute('min', validFromInput.value < todayStr ? validFromInput.value : todayStr);
 
-        // Date validation
-        validFromInput.addEventListener('change', function() {
+        validFromInput.addEventListener('change', function () {
             validToInput.setAttribute('min', this.value);
         });
 
-        // Fetch data on page load and set up event listener
         fetchData().then(() => {
-            updateTargetSelection(); // Ensure the dropdown is populated on page load
+            updateTargetSelection();
             applyToSelect.addEventListener('change', updateTargetSelection);
         });
 
@@ -314,35 +296,15 @@
             const validTo = validToInput.value;
             const status = document.getElementById('status').checked;
 
-            // Comprehensive Validation
-            if (!offerName) {
-                showToast('Offer name is required', 'error');
-                return;
-            }
-            if (offerName.length < 3) {
-                showToast('Offer name must be at least 3 characters', 'error');
-                return;
-            }
-            if (!offerType) {
-                showToast('Offer type is required', 'error');
-                return;
-            }
-            if (!targetSelectionValue) {
-                showToast(`Please select a ${offerType.toLowerCase()}`, 'error');
-                return;
-            }
+            if (!offerName) return showToast('Offer name is required', 'error');
+            if (offerName.length < 3) return showToast('Offer name must be at least 3 characters', 'error');
+            if (!offerType) return showToast('Offer type is required', 'error');
+            if (!targetSelectionValue) return showToast(`Please select a ${offerType.toLowerCase()}`, 'error');
             if (isNaN(discountPercentage) || discountPercentage < 0 || discountPercentage > 100) {
-                showToast('Discount percentage must be between 0 and 100', 'error');
-                return;
+                return showToast('Discount percentage must be between 0 and 100', 'error');
             }
-            if (!validFrom || !validTo) {
-                showToast('Start and End dates are required', 'error');
-                return;
-            }
-            if (new Date(validFrom) > new Date(validTo)) {
-                showToast('Start date must be before end date', 'error');
-                return;
-            }
+            if (!validFrom || !validTo) return showToast('Start and End dates are required', 'error');
+            if (new Date(validFrom) > new Date(validTo)) return showToast('Start date must be before end date', 'error');
 
             const offerData = {
                 offerName,
@@ -355,6 +317,9 @@
                 status
             };
 
+            const submitBtn = e.target.querySelector('button[type=submit]');
+            submitBtn.disabled = true;
+
             try {
                 const response = await fetch(`/admin/edit-offer/<%= offer._id %>`, {
                     method: 'PATCH',
@@ -365,20 +330,21 @@
                 const result = await response.json();
                 if (!response.ok) {
                     showToast(result.message || 'Failed to update offer', 'error');
+                    submitBtn.disabled = false;
                     return;
                 }
 
                 showToast('Offer updated successfully', 'success');
                 setTimeout(() => {
                     window.location.href = '/admin/offers';
-                }, 1500);
+                }, 1200);
             } catch (error) {
                 console.error('Error updating offer:', error);
                 showToast(`Failed to update offer: ${error.message}`, 'error');
+                submitBtn.disabled = false;
             }
         });
 
-        // Toast notification function
         function showToast(message, type = 'error') {
             Toastify({
                 text: message,

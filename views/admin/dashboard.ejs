@@ -15,17 +15,6 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
-        @media (max-width: 768px) {
-            #sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-            }
-            .main-content {
-                margin-left: 0 !important;
-                padding: 1rem;
-            }
-        }
         .sidebar-link:hover {
             background-color: rgba(59, 130, 246, 0.1);
         }
@@ -41,34 +30,54 @@
         <%- include("../partials/admin/adminSideBar.ejs") %>
 
         <!-- Main Content -->
-        <div class="flex-1 main-content p-6 bg-gray-50">
-            <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-md mb-6">
+        <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 bg-gray-50 min-w-0">
+            <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6">
                 <h1 class="text-2xl font-semibold text-gray-800">Dashboard</h1>
 
             </div>
 
             <!-- Summary Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h6 class="text-sm text-gray-500">Total Sales</h6>
-                    <h4 id="totalSales" class="text-2xl font-semibold text-blue-600">₹0</h4>
+                <div class="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-sack-dollar"></i>
+                    </span>
+                    <div>
+                        <h6 class="text-sm text-gray-500">Total Sales</h6>
+                        <h4 id="totalSales" class="text-2xl font-semibold text-gray-900">₹0</h4>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h6 class="text-sm text-gray-500">Total Orders</h6>
-                    <h4 id="totalOrders" class="text-2xl font-semibold text-blue-600">0</h4>
+                <div class="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-box"></i>
+                    </span>
+                    <div>
+                        <h6 class="text-sm text-gray-500">Total Orders</h6>
+                        <h4 id="totalOrders" class="text-2xl font-semibold text-gray-900">0</h4>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h6 class="text-sm text-gray-500">Total Coupons</h6>
-                    <h4 id="totalCoupons" class="text-2xl font-semibold text-blue-600">0</h4>
+                <div class="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-ticket"></i>
+                    </span>
+                    <div>
+                        <h6 class="text-sm text-gray-500">Total Coupons</h6>
+                        <h4 id="totalCoupons" class="text-2xl font-semibold text-gray-900">0</h4>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h6 class="text-sm text-gray-500">Total Products Sold</h6>
-                    <h4 id="totalProductSold" class="text-2xl font-semibold text-blue-600">0</h4>
+                <div class="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-book"></i>
+                    </span>
+                    <div>
+                        <h6 class="text-sm text-gray-500">Total Products Sold</h6>
+                        <h4 id="totalProductSold" class="text-2xl font-semibold text-gray-900">0</h4>
+                    </div>
                 </div>
             </div>
 
             <!-- Filter Form -->
-            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm mb-6">
                 <form action="#" method="POST" id="filterForm">
                     <div class="flex flex-col sm:flex-row gap-4">
                         <div class="flex-1">
@@ -92,7 +101,7 @@
                             <div id="endDateError" class="text-red-500 text-sm hidden"></div>
                         </div>
                         <div class="flex items-end">
-                            <button type="submit" class="px-5 py-2 bg-gray-700 text-white  hover:bg-green-600 transition">Apply Filter</button>
+                            <button type="submit" class="px-5 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800 transition">Apply Filter</button>
                         </div>
                     </div>
                 </form>
@@ -100,7 +109,7 @@
 
             <!-- Charts Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                         <i class="fas fa-book mr-2 text-blue-500"></i>
                         Top Selling Books
@@ -109,7 +118,7 @@
                         <!-- Book items will be added dynamically -->
                     </ul>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="bg-white p-6 rounded-xl shadow-sm">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Top Selling Categories</h3>
                     <div class="flex justify-center">
                         <div class="w-64 h-64">
@@ -120,7 +129,7 @@
             </div>
 
             <!-- Sales Table -->
-            <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="bg-white p-6 rounded-xl shadow-sm">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold text-gray-800">Sales Overview</h3>
                 </div>
