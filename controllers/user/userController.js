@@ -96,14 +96,11 @@ export const handleSignupPage = async (req, res, next) => {
             phoneNumber,
             referralCode
         }
-        const token = jwt.sign({ email: email }, CONFIG.JWT_SECRET, { expiresIn: CONFIG.JWT_EXPIRES })
 
-        // console.log('sign up Temp session :', req.session.temp, token)
         return res.status(200).json({
             success: true,
             message: otpResult.message,
-            redirect: '/otp/otp-verify',
-            token
+            redirect: '/otp/otp-verify'
         })
 
     } catch (error) {
@@ -197,28 +194,39 @@ export const renderEmailVerify = async (req, res, next) => {
     }
 }
 
+const buildResetSecret = (user) => process.env.JWT_SECRET + user.password;
+
+const PASSWORD_TOO_WEAK = 'Password must be at least 6 characters and include a letter and a number';
+const isStrongPassword = (password) =>
+    typeof password === 'string' &&
+    password.length >= 6 &&
+    /[a-zA-Z]/.test(password) &&
+    /[0-9]/.test(password);
+
 export const requestPasswordReset = async (req, res, next) => {
     const { email } = req.body
     try {
         console.log(email)
         const user = await User.findOne({ email: email })//FIND EMAIL
 
-        //IF EMAIL NOT MATCHING
+        const genericResponse = {
+            success: true,
+            message: "If that email is registered, we've sent a password reset link to it."
+        };
+
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "Please give a valid emailId"
-            })
+            return res.status(200).json(genericResponse)
         }
 
         //CREATE JWT SCRET WITH USER PASSWORD
-        const secret = process.env.JWT_SECRET + user.password;
+        const secret = buildResetSecret(user);
         //JWT TOKEN CREATE
         const token = jwt.sign({ id: user._id, email: email }, secret, { expiresIn: '1h' });
 
         const baseUrl = process.env.BASE_URL || `http://localhost:3999`
         //PASS WITH API LIKE QUERY
         const resetURL = `${baseUrl}/resetPassword?id=${user._id}&token=${token}`;
+        console.log("Password reset link:", resetURL)
 
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -236,15 +244,12 @@ export const requestPasswordReset = async (req, res, next) => {
             text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
             Please click on the following link, or paste this into your browser to complete the process:\n\n
             ${resetURL}\n\n
-            If you did not request this, please ignore this email and your password will remain unchanged.\n`,
+            This link expires in 1 hour. If you did not request this, please ignore this email and your password will remain unchanged.\n`,
         };
 
         await transporter.sendMail(mailOptions);
 
-        return res.status(200).json({
-            success: true,
-            message: 'Password reset link sent'
-        })
+        return res.status(200).json(genericResponse)
     } catch (error) {
         next(new AppError(`Forgot password failed : ${error} `, 500))
     }
@@ -252,28 +257,59 @@ export const requestPasswordReset = async (req, res, next) => {
 
 export const renderResetPassword = async (req, res, next) => {
     try {
-        return res.render('user/forgot')
+        const { id, token } = req.query;
+
+        if (!id || !token) {
+            return res.render('user/forgot', { valid: false, id: '', token: '' })
+        }
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.render('user/forgot', { valid: false, id: '', token: '' })
+        }
+
+        try {
+            jwt.verify(token, buildResetSecret(user));
+        } catch (err) {
+            return res.render('user/forgot', { valid: false, id: '', token: '' })
+        }
+
+        return res.render('user/forgot', { valid: true, id, token })
     } catch (error) {
-        next(new AppError(`Forgot password failed : ${error},500`))
+        next(new AppError(`Forgot password failed : ${error}`, 500))
     }
 }
 
 
 export const resetPassword = async (req, res, next) => {
     const { id, token } = req.query;// TAKE ID AND TOKEN FROM QUERY
-    const { password } = req.body;
+    const { password, confirmPassword } = req.body;
     console.log("Reset password :", req.query)
 
     try {
-        const user = await User.findOne({ _id: id });
-        if (!user) {
-            return res.status(400).json({ message: "User not exists!" });
+        if (!id || !token) {
+            return res.status(400).json({ success: false, message: "This reset link is invalid." });
         }
 
-        const secret = process.env.JWT_SECRET + user.password;
+        if (!isStrongPassword(password)) {
+            return res.status(400).json({ success: false, message: PASSWORD_TOO_WEAK });
+        }
+        if (confirmPassword !== undefined && password !== confirmPassword) {
+            return res.status(400).json({ success: false, message: "Passwords do not match" });
+        }
 
-        //VERIFY WITH GIVE TOKEN  
-        const verify = jwt.verify(token, secret);
+        const user = await User.findOne({ _id: id });
+        if (!user) {
+            return res.status(400).json({ success: false, message: "This reset link is invalid." });
+        }
+
+        //VERIFY WITH GIVEN TOKEN
+        try {
+            jwt.verify(token, buildResetSecret(user));
+        } catch (err) {
+            return res.status(400).json({ success: false, message: "This reset link has expired or was already used. Please request a new one." });
+        }
+
         //HASH PASSWORD
         const encryptedPassword = await bcrypt.hash(password, 10);
 
@@ -287,12 +323,9 @@ export const resetPassword = async (req, res, next) => {
             }
         );
 
-        await user.save();
-
-        res.status(200).json({ message: 'Password has been reset' });
+        return res.status(200).json({ success: true, message: 'Password has been reset successfully' });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Something went wrong' });
+        next(new AppError(`Reset password failed : ${error}`, 500));
     }
 };
 
@@ -515,7 +548,7 @@ export const updateNewMail = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: otpResult.message,
-            redirect: "/otp/verify"//VERIFY NEW EMAIL
+            redirect: "/otp/otp-verify"
         })
 
     } catch (error) {

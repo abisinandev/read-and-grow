@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import nodemailer from "nodemailer"
 import mailSender from "../utils/mailSender.js";
+import { OTP_EXPIRY_SECONDS } from "../utils/constants/otp.js";
 const otpSchema = new mongoose.Schema({
     email: {
         type: String,
@@ -13,7 +14,7 @@ const otpSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now,
-        expires: 60 * 5,
+        expires: OTP_EXPIRY_SECONDS,
     },
 
 })
@@ -93,7 +94,7 @@ async function sendVerficationEmail(email, otp) {
     <div class="container">
         <img src="https://via.placeholder.com/120/000000/ff3b3b?text=Read+%26+Grow" alt="Read & Grow Logo" class="logo">
         <div class="header">Your OTP Code</div>
-        <p class="message">Use the code below to verify your email. This OTP is valid for <strong>5 minutes</strong>.</p>
+        <p class="message">Use the code below to verify your email. This OTP is valid for <strong>${Math.round(OTP_EXPIRY_SECONDS / 60)} minutes</strong>.</p>
         <div class="otp-box">${otp}</div>
         <p class="message">If you did not request this OTP, please ignore this email or contact support.</p>
         <div class="footer">

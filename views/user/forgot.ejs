@@ -4,133 +4,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password</title>
+    <title>Reset Password - REad & GroW</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Add Toastify CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 </head>
 
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-
-    <div class="bg-white p-8 rounded-2xl shadow-lg w-96 text-center">
-        <!-- Title -->
-        <h2 class="text-xl font-semibold italic mb-6">Forgot Password</h2>
-        <form id="resetForm">
-            <!-- New Password Field -->
-            <div class="mb-4">
-                <input type="password" id="newPassword" placeholder="New password"
-                    class="w-full px-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 ">
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-sm">
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="bg-red-600 px-8 py-7 text-center">
+                <span class="inline-flex w-11 h-11 rounded-xl bg-white/15 items-center justify-center mb-2">
+                    <i class="fas fa-key text-white text-base"></i>
+                </span>
+                <h1 class="text-white text-lg font-semibold tracking-tight">REad &amp; GroW</h1>
+                <p class="text-red-100 text-xs mt-1">Reset your password</p>
             </div>
 
-            <!-- Confirm Password Field -->
-            <div class="mb-6">
-                <input type="password" id="confirmPassword" placeholder="Confirm Password"
-                    class="w-full px-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 ">
-            </div>
+            <% if (!valid) { %>
+                <div class="p-8 text-center">
+                    <span class="inline-flex w-12 h-12 rounded-full bg-red-50 items-center justify-center mb-4">
+                        <i class="fas fa-triangle-exclamation text-red-600 text-lg"></i>
+                    </span>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-1">This link isn't valid</h2>
+                    <p class="text-sm text-gray-500 mb-6">It may have expired or already been used. Request a new reset link to continue.</p>
+                    <a href="/email-verify"
+                        class="block w-full bg-red-600 text-white py-2.5 rounded-full text-base font-semibold hover:bg-red-700 transition-colors duration-200 shadow-md">
+                        Request a new link
+                    </a>
+                    <p class="text-xs text-gray-500 mt-4">
+                        <a href="/login" class="text-red-600 hover:underline">Back to login</a>
+                    </p>
+                </div>
+            <% } else { %>
+                <form class="p-8 space-y-4" id="resetForm">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-1">Choose a new password</h2>
+                    <p class="text-sm text-gray-500 mb-4">At least 6 characters, with a letter and a number.</p>
 
-            <!-- Submit Button -->
-            <button type="submit"
-                class="w-full bg-red-600 text-white py-2 rounded-[20px] hover:bg-red-700 transition duration-300">
-                Reset Password
-            </button>
-        </form>
+                    <div>
+                        <label for="newPassword" class="block text-xs font-medium text-gray-600 mb-1">New password</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm"></i>
+                            <input type="password" id="newPassword" placeholder="New password" autocomplete="new-password"
+                                class="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            <button type="button" data-target="newPassword"
+                                class="password-toggle-icon absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                                aria-label="Show password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="confirmPassword" class="block text-xs font-medium text-gray-600 mb-1">Confirm password</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm"></i>
+                            <input type="password" id="confirmPassword" placeholder="Confirm password" autocomplete="new-password"
+                                class="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                            <button type="button" data-target="confirmPassword"
+                                class="password-toggle-icon absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                                aria-label="Show password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn"
+                        class="w-full bg-red-600 text-white py-2.5 rounded-full text-base font-semibold hover:bg-red-700 transition-colors duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        Reset password
+                    </button>
+
+                    <p class="text-center text-xs text-gray-500 pt-1">
+                        <a href="/login" class="text-red-600 hover:underline">Back to login</a>
+                    </p>
+                </form>
+            <% } %>
+        </div>
     </div>
 
-    <!-- Add Toastify JS -->
-    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <% if (valid) { %>
     <script>
+        function showToast(message, type = 'error') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                backgroundColor: type === 'success' ? "#16a34a" : "#dc2626",
+                stopOnFocus: true,
+            }).showToast();
+        }
+
+        // Mirrors signup's password rule so the requirement is consistent across the app.
+        function isStrongPassword(password) {
+            return /[a-zA-Z]/.test(password) && /[0-9]/.test(password) && password.length >= 6;
+        }
+
+        document.querySelectorAll('.password-toggle-icon').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const input = document.getElementById(btn.dataset.target);
+                const icon = btn.querySelector('i');
+                const isHidden = input.type === 'password';
+                input.type = isHidden ? 'text' : 'password';
+                icon.classList.toggle('fa-eye', !isHidden);
+                icon.classList.toggle('fa-eye-slash', isHidden);
+            });
+        });
+
         document.addEventListener("DOMContentLoaded", () => {
             const form = document.getElementById("resetForm");
+            const submitBtn = document.getElementById("submitBtn");
 
             form.addEventListener("submit", async (e) => {
                 e.preventDefault();
 
-                const newPasswordInput = document.getElementById("newPassword");
-                const confirmPasswordInput = document.getElementById("confirmPassword");
-
-                if (!newPasswordInput || !confirmPasswordInput) {
-                    console.error("Password input fields not found!");
-                    return;
-                }
-
-                const newPassword = newPasswordInput.value;
-                const confirmPassword = confirmPasswordInput.value;
+                const newPassword = document.getElementById("newPassword").value;
+                const confirmPassword = document.getElementById("confirmPassword").value;
                 const urlParams = new URLSearchParams(window.location.search);
                 const userId = urlParams.get("id");
                 const token = urlParams.get("token");
 
                 if (!newPassword || !confirmPassword) {
-                    Toastify({
-                        text: "Please fill in both password fields",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#dc2626",
-                        stopOnFocus: true,
-                    }).showToast();
+                    showToast("Please fill in both password fields");
                     return;
                 }
-
+                if (!isStrongPassword(newPassword)) {
+                    showToast("Password must be at least 6 characters and include a letter and a number");
+                    return;
+                }
                 if (newPassword !== confirmPassword) {
-                    Toastify({
-                        text: "Passwords do not match",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#dc2626",
-                        stopOnFocus: true,
-                    }).showToast();
+                    showToast("Passwords do not match");
                     return;
                 }
 
-                const formData = {
-                    password: newPassword,
-                    confirmPassword: confirmPassword
-                };
-
+                submitBtn.disabled = true;
                 try {
-                    const response = await fetch(`/resetPassword?id=${userId}&token=${token}`, {
+                    const response = await fetch(`/resetPassword?id=${encodeURIComponent(userId)}&token=${encodeURIComponent(token)}`, {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify(formData)
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ password: newPassword, confirmPassword })
                     });
 
+                    const data = await response.json();
+
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        showToast(data.message || "This link is no longer valid. Please request a new one.");
+                        submitBtn.disabled = false;
+                        return;
                     }
 
-                    const data = await response.json();
-                    console.log("Success:", data);
-
-                    Toastify({
-                        text: "Password updated successfully!",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#16a34a",
-                        stopOnFocus: true,
-                    }).showToast();
-
+                    showToast(data.message || "Password updated successfully!", "success");
                     setTimeout(() => {
-                        window.location.href='/login'
-                    }, 2000);
+                        window.location.href = '/login';
+                    }, 1500);
 
                 } catch (error) {
                     console.error("Error:", error);
-                    Toastify({
-                        text: "An error occurred while updating the password",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#dc2626",
-                        stopOnFocus: true,
-                    }).showToast();
+                    showToast("An error occurred while updating the password");
+                    submitBtn.disabled = false;
                 }
             });
         });
     </script>
+    <% } %>
 
 </body>
 
