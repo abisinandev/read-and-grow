@@ -6,6 +6,15 @@ import { CONFIG } from "./utils/constants/envConfig.js";
 
 const PORT = CONFIG.PORT;
 
+process.on("unhandledRejection", (reason) => {
+    console.error("Unhandled Promise Rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+    console.error("Uncaught Exception:", error);
+    process.exit(1);
+});
+
 const startServer = async () => {
     try {
         await connectDb();
