@@ -29,6 +29,7 @@ import {
     renderProductPage,
 } from "../controllers/admin/productController.js"
 import upload from '../utils/multer.js';
+import validateUploadedImages from '../utils/verifyImage.js';
 import { acceptReturn, getOrderPage, rejectReturn, updateStatus, viewOrder } from '../controllers/admin/orderController.js';
 import { addOffers, deleteOffer, editOffer, renderAddOffers, renderEditOffers, renderOffersPage, selectCategory, selectProduct } from '../controllers/admin/offersController.js';
 import { addCoupon, deleteCoupon, editCoupon, renderAddCoupon, renderCouponsPage, renderEditCoupon } from '../controllers/admin/couponController.js';
@@ -68,9 +69,9 @@ router.get('/search-category', adminAuth, searchCategory)
 //PRODUCT MANAGMENT
 router.get("/products", adminAuth, renderProductPage)
 router.get("/add-products", adminAuth, addProducts)
-router.post("/add-products", adminAuth, upload.array('images', 3), addProductsPost)
+router.post("/add-products", adminAuth, upload.array('images', 3), validateUploadedImages, addProductsPost)
 router.get('/product/:id', adminAuth, editProductsGet)
-router.patch("/product/:id", adminAuth, upload.array('images', 3), editProduct)
+router.patch("/product/:id", adminAuth, upload.array('images', 3), validateUploadedImages, editProduct)
 router.delete('/product/:id', adminAuth, deleteProduct)
 router.put('/block-product/:id', adminAuth, blockProduct)
 

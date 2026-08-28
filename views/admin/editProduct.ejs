@@ -30,6 +30,7 @@
     <div class="container-fluid">
         <%- include("../partials/admin/adminSideBar.ejs") %>
         <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 min-w-0">
+            <%- include("../partials/admin/breadcrumb.ejs", { breadcrumbs: [{ label: 'Products', url: '/admin/products' }, { label: 'Edit Product' }] }) %>
             <header class="bg-white shadow-sm sticky top-0 z-10 mb-6 rounded-xl">
                 <div class="flex justify-between items-center px-6 py-4">
                     <h1 class="text-2xl font-semibold text-gray-800">Edit Products</h1>
@@ -40,7 +41,10 @@
                     <input type="hidden" id="productId" name="productId" value="<%= product._id %>">
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700">Product Name</label>
-                        <input type="text" id="name" name="name" required value="<%= product.name %>"
+                        <input type="text" id="name" name="name" required minlength="3" maxlength="100"
+                            pattern="[A-Za-z0-9][A-Za-z0-9\s.,&#39;&quot;&amp;:!()\-]{2,99}"
+                            title="3-100 characters: letters, numbers, spaces and basic punctuation only"
+                            value="<%= product.name %>"
                             class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     </div>
                     <div>
@@ -62,7 +66,10 @@
                     </div>
                     <div>
                         <label for="author" class="block text-sm font-medium text-gray-700">Author</label>
-                        <input type="text" id="author" name="author" required value="<%= product.authorName %>"
+                        <input type="text" id="author" name="author" required minlength="3" maxlength="50"
+                            pattern="[A-Za-z][A-Za-z\s.&#39;\-]{2,49}"
+                            title="3-50 letters; spaces, apostrophes, periods and hyphens allowed"
+                            value="<%= product.authorName %>"
                             class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -115,7 +122,7 @@
                 <button id="cropModalClose" class="text-gray-500 hover:text-gray-700 text-2xl" aria-label="Close">×</button>
             </div>
             <div class="mb-4">
-                <img id="cropImage" class="max-w-full max-h-[60vh]" alt="Crop preview">
+                <img id="cropImage" class="max-w-full max-h-[60vh]" alt="Crop preview" crossorigin="anonymous">
             </div>
             <div class="flex justify-end space-x-4">
                 <button id="cancelCrop" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">Cancel</button>
@@ -127,33 +134,67 @@
         document.addEventListener("DOMContentLoaded", () => {
             let croppers = {};
             let currentIndex = null;
-            const validImageTypes = ['jpeg', 'jpg', 'png', 'webp'];
+
+            const NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9\s.,'"&:!()-]{2,99}$/;
+            const AUTHOR_REGEX = /^[A-Za-z][A-Za-z\s.'-]{2,49}$/;
+            const PRICE_REGEX = /^\d+(\.\d{1,2})?$/;
+            const STOCK_REGEX = /^\d+$/;
+
+            const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            const ALLOWED_EXTENSIONS = ['jpeg', 'jpg', 'png', 'webp'];
+            const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
             [1, 2, 3].forEach(i => {
                 const preview = document.getElementById(`preview${i}`);
                 if (document.getElementById(`img-preview${i}`).src) preview.classList.remove('hidden');
             });
 
+            // Validates the real file type (extension + browser-sniffed mimetype)
+            // and size before we ever accept an image into the form.
+            function validateImageFile(file) {
+                const extension = file.name.split('.').pop().toLowerCase();
+                if (!ALLOWED_EXTENSIONS.includes(extension) || !ALLOWED_MIME_TYPES.includes(file.type)) {
+                    return `"${file.name}" is not a supported image type. Use JPG, PNG or WEBP.`;
+                }
+                if (file.size > MAX_IMAGE_SIZE) {
+                    return `"${file.name}" exceeds the 5MB size limit.`;
+                }
+                return null;
+            }
+
             window.previewImage = (event, index) => {
                 const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = e => {
-                        document.getElementById(`img-preview${index}`).src = e.target.result;
-                        document.getElementById(`preview${index}`).classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
+                if (!file) return;
+
+                const error = validateImageFile(file);
+                if (error) {
+                    showToast(error);
+                    event.target.value = "";
+                    return;
                 }
+
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById(`img-preview${index}`).src = e.target.result;
+                    document.getElementById(`preview${index}`).classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
             };
 
             window.startCrop = index => {
                 currentIndex = index;
                 const img = document.getElementById(`img-preview${index}`);
                 const cropImg = document.getElementById('cropImage');
+                // Existing product images are served from Cloudinary (a different
+                // origin). Without crossOrigin set before the src is (re)assigned,
+                // Cropper's getCroppedCanvas() throws/produces a tainted canvas and
+                // "Save Crop" silently fails on any image that wasn't just picked
+                // from disk in this session.
+                cropImg.crossOrigin = 'anonymous';
                 cropImg.src = img.src;
                 document.getElementById('cropModal').classList.remove('hidden');
                 if (croppers[index]) croppers[index].destroy();
-                croppers[index] = new Cropper(cropImg, { aspectRatio: 1, viewMode: 2, autoCropArea: 1, responsive: true });
+                croppers[index] = new Cropper(cropImg, { aspectRatio: 1, viewMode: 2, autoCropArea: 1, responsive: true, checkCrossOrigin: true });
             };
 
             window.removeImage = index => {
@@ -180,23 +221,30 @@
             });
 
             document.getElementById('applyCrop').addEventListener('click', () => {
-                if (croppers[currentIndex]) {
-                    const croppedCanvas = croppers[currentIndex].getCroppedCanvas();
-                    if (croppedCanvas) {
-                        croppedCanvas.toBlob(blob => {
-                            const file = new File([blob], `cropped-image${currentIndex}.jpg`, { type: 'image/jpeg' });
-                            const imgPreview = document.getElementById(`img-preview${currentIndex}`);
-                            imgPreview.src = URL.createObjectURL(blob);
-                            const input = document.getElementById(`image${currentIndex}`);
-                            const dataTransfer = new DataTransfer();
-                            dataTransfer.items.add(file);
-                            input.files = dataTransfer.files;
-                            document.getElementById('cropModal').classList.add('hidden');
-                            croppers[currentIndex].destroy();
-                            delete croppers[currentIndex];
-                        }, 'image/jpeg');
-                    }
+                if (!croppers[currentIndex]) return;
+
+                let croppedCanvas;
+                try {
+                    croppedCanvas = croppers[currentIndex].getCroppedCanvas();
+                } catch (err) {
+                    console.error('Crop failed:', err);
+                    return showToast('Could not crop this image. Please try re-uploading it and cropping again.');
                 }
+                if (!croppedCanvas) return showToast('Could not crop this image.');
+
+                croppedCanvas.toBlob(blob => {
+                    if (!blob) return showToast('Could not crop this image. Please try re-uploading it and cropping again.');
+                    const file = new File([blob], `cropped-image${currentIndex}.jpg`, { type: 'image/jpeg' });
+                    const imgPreview = document.getElementById(`img-preview${currentIndex}`);
+                    imgPreview.src = URL.createObjectURL(blob);
+                    const input = document.getElementById(`image${currentIndex}`);
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    input.files = dataTransfer.files;
+                    document.getElementById('cropModal').classList.add('hidden');
+                    croppers[currentIndex].destroy();
+                    delete croppers[currentIndex];
+                }, 'image/jpeg');
             });
 
             document.getElementById('editProductForm').addEventListener('submit', async e => {
@@ -211,12 +259,13 @@
                 const productId = form.productId.value.trim();
 
                 if (!name) return showToast("Product name is required");
-                if (name.length < 3) return showToast("Product name must be at least 3 characters long");
+                if (!NAME_REGEX.test(name)) return showToast("Product name must be 3-100 characters (letters, numbers, spaces and basic punctuation only)");
                 if (!description) return showToast("Description is required");
                 if (!category) return showToast("Category is required");
                 if (!author) return showToast("Author is required");
-                if (!price || isNaN(price) || Number(price) <= 0) return showToast("Price must be a positive number");
-                if (!stock || isNaN(stock) || Number(stock) < 0 || !Number.isInteger(Number(stock))) return showToast("Stock must be a non-negative whole number");
+                if (!AUTHOR_REGEX.test(author)) return showToast("Author must be 3-50 letters (spaces, apostrophes, periods and hyphens allowed)");
+                if (!price || !PRICE_REGEX.test(price) || Number(price) <= 0) return showToast("Price must be a positive number with up to 2 decimal places");
+                if (!stock || !STOCK_REGEX.test(stock)) return showToast("Stock must be a non-negative whole number");
                 if (!productId) return showToast("Product ID is required");
 
                 const formData = new FormData();
@@ -236,8 +285,8 @@
                     const existingImageInput = document.getElementById(`existingImage${i}`);
 
                     if (input.files?.[0]) {
-                        const extension = input.files[0].name.split('.').pop().toLowerCase();
-                        if (!validImageTypes.includes(extension)) return showToast(`${extension} is an invalid file type`);
+                        const error = validateImageFile(input.files[0]);
+                        if (error) return showToast(error);
                         formData.append('images', input.files[0]);
                         imagePlan.push('new');
                         hasAnyImage = true;
@@ -260,6 +309,7 @@
                     Swal.fire({ title: 'Success!', text: result.message || 'Product updated successfully', icon: 'success', confirmButtonColor: '#3085d6' });
                     setTimeout(() => window.location.href = '/admin/products', 1500);
                 } catch (error) {
+                    Swal.close();
                     showToast(error.message || "Failed to update product");
                 }
             });

@@ -39,6 +39,7 @@
 
         <!-- Main Content -->
         <div class="flex-1 p-4 pt-20 sm:p-6 md:pt-6 min-w-0">
+            <%- include("../partials/admin/breadcrumb.ejs", { breadcrumbs: [{ label: 'Products', url: '/admin/products' }, { label: 'Add Product' }] }) %>
             <header class="bg-white shadow-sm sticky top-0 z-10 mb-6 rounded-xl">
                 <div class="flex justify-between items-center px-6 py-4">
                     <h1 class="text-2xl font-semibold text-gray-800">Add Products</h1>
@@ -49,7 +50,9 @@
                 <form id="addProductForm" class="space-y-6" enctype="multipart/form-data">
                         <div>
                             <label for="name" class="block text-sm font-medium text-gray-700">Product Name</label>
-                            <input type="text" id="name" name="name" required
+                            <input type="text" id="name" name="name" required minlength="3" maxlength="100"
+                                pattern="[A-Za-z0-9][A-Za-z0-9\s.,&#39;&quot;&amp;:!()\-]{2,99}"
+                                title="3-100 characters: letters, numbers, spaces and basic punctuation only"
                                 class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         </div>
                         <div>
@@ -73,7 +76,9 @@
 
                         <div>
                             <label for="author" class="block text-sm font-medium text-gray-700">Author</label>
-                            <input type="text" id="author" name="author" required
+                            <input type="text" id="author" name="author" required minlength="3" maxlength="50"
+                                pattern="[A-Za-z][A-Za-z\s.&#39;\-]{2,49}"
+                                title="3-50 letters; spaces, apostrophes, periods and hyphens allowed"
                                 class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -163,7 +168,7 @@
                     aria-label="Close">×</button>
             </div>
             <div class="mb-4">
-                <img id="cropImage" class="max-w-full max-h-[60vh]" alt="Crop preview">
+                <img id="cropImage" class="max-w-full max-h-[60vh]" alt="Crop preview" crossorigin="anonymous">
             </div>
             <div class="flex justify-end space-x-4">
                 <button id="cancelCrop"
@@ -178,19 +183,56 @@
         document.addEventListener("DOMContentLoaded", function () {
             let croppers = {};
             let currentIndex = null;
-    
+
+            const NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9\s.,'"&:!()-]{2,99}$/;
+            const AUTHOR_REGEX = /^[A-Za-z][A-Za-z\s.'-]{2,49}$/;
+            const PRICE_REGEX = /^\d+(\.\d{1,2})?$/;
+            const STOCK_REGEX = /^\d+$/;
+
+            const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            const ALLOWED_EXTENSIONS = ['jpeg', 'jpg', 'png', 'webp'];
+            const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+            const showError = (text) => Toastify({
+                text,
+                duration: 3000,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "#f44336"
+            }).showToast();
+
+            // Validates the real file type (extension + browser-sniffed mimetype)
+            // and size before we ever accept an image into the form.
+            function validateImageFile(file) {
+                const extension = file.name.split('.').pop().toLowerCase();
+                if (!ALLOWED_EXTENSIONS.includes(extension) || !ALLOWED_MIME_TYPES.includes(file.type)) {
+                    return `"${file.name}" is not a supported image type. Use JPG, PNG or WEBP.`;
+                }
+                if (file.size > MAX_IMAGE_SIZE) {
+                    return `"${file.name}" exceeds the 5MB size limit.`;
+                }
+                return null;
+            }
+
             // Preview image when selected
             window.previewImage = function (event, index) {
                 const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        const previewImg = document.getElementById(`img-preview${index}`);
-                        previewImg.src = e.target.result;
-                        document.getElementById(`preview${index}`).classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
+                if (!file) return;
+
+                const error = validateImageFile(file);
+                if (error) {
+                    showError(error);
+                    event.target.value = "";
+                    return;
                 }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewImg = document.getElementById(`img-preview${index}`);
+                    previewImg.src = e.target.result;
+                    document.getElementById(`preview${index}`).classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
             };
     
             // Start cropping process
@@ -258,92 +300,24 @@
     
             document.getElementById('addProductForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-    
+
                 const name = document.getElementById('name').value.trim();
                 const description = document.getElementById('description').value.trim();
-                const category = document.getElementById('category').value.trim(); // Added .trim() for consistency
+                const category = document.getElementById('category').value.trim();
                 const author = document.getElementById('author').value.trim();
                 const price = document.getElementById('price').value.trim();
                 const stock = document.getElementById('stock').value.trim();
-    
+
                 // Enhanced validation
-                if (!name) {
-                    Toastify({
-                        text: "Product name is required",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
-                    return;
-                }
-    
-                if (name.length < 3) {
-                    Toastify({
-                        text: "Product name must be at least 3 characters long",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
-                    return;
-                }
-    
-                if (!description) {
-                    Toastify({
-                        text: "Description is required",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
-                    return;
-                }
-    
-                if (!category) {
-                    Toastify({
-                        text: "Category is required",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
-                    return;
-                }
-    
-                if (!author) {
-                    Toastify({
-                        text: "Author is required",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
-                    return;
-                }
-    
-                if (!price || isNaN(price) || Number(price) <= 0) {
-                    Toastify({
-                        text: "Price must be a positive number",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
-                    return;
-                }
-    
-                if (!stock || isNaN(stock) || Number(stock) < 0 || !Number.isInteger(Number(stock))) {
-                    Toastify({
-                        text: "Stock must be a non-negative integer",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
-                    return;
-                }
-    
+                if (!name) return showError("Product name is required");
+                if (!NAME_REGEX.test(name)) return showError("Product name must be 3-100 characters (letters, numbers, spaces and basic punctuation only)");
+                if (!description) return showError("Description is required");
+                if (!category) return showError("Category is required");
+                if (!author) return showError("Author is required");
+                if (!AUTHOR_REGEX.test(author)) return showError("Author must be 3-50 letters (spaces, apostrophes, periods and hyphens allowed)");
+                if (!price || !PRICE_REGEX.test(price) || Number(price) <= 0) return showError("Price must be a positive number with up to 2 decimal places");
+                if (!stock || !STOCK_REGEX.test(stock)) return showError("Stock must be a non-negative whole number");
+
                 const formData = new FormData();
                 formData.append('name', name);
                 formData.append('description', description);
@@ -351,64 +325,24 @@
                 formData.append('author', author);
                 formData.append('price', price);
                 formData.append('stock', stock);
-    
-                const fileType = ['jpeg', 'jpg', 'png', 'webp'];
+
                 let hasImages = false;
 
                 for (let i = 1; i <= 3; i++) {
                     const input = document.getElementById(`image${i}`);
-                    
+
                     if (input.files?.[0]) {
                         const file = input.files[0];
-                        const extension = file.name.split('.').pop().toLowerCase();
-
-                        if (!fileType.includes(extension)) {
-                            Toastify({
-                                text: `${extension.toUpperCase()} is an invalid file type.`,
-                                duration: 3000,
-                                gravity: "top",
-                                position: "right",
-                                backgroundColor: "#f44336"
-                            }).showToast();
-                            return;
-                        }
-
-
-                        if (file.size > 5 * 1024 * 1024) {
-                            Toastify({
-                                text: `Image ${i} must be less than 5MB.`,
-                                duration: 3000,
-                                gravity: "top",
-                                position: "right",
-                                backgroundColor: "#f44336"
-                            }).showToast();
-                            return;
-                        }
+                        const error = validateImageFile(file);
+                        if (error) return showError(error);
 
                         formData.append('images', file);
                         hasImages = true;
                     }
                 }
 
-    
-                if (!hasImages) {
-                    Toastify({
-                        text: "Please upload at least one image",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
-                    return;
-                }
-                
-                // if(hasImages){
-                //     for(let i=1; i<=3; i++){
-                //         const input = document.getElementById(`image${i}`).value;
-                //         if(input)
-                //     }
-                // }
-         
+                if (!hasImages) return showError("Please upload at least one image");
+
                 try {
                     Swal.fire({
                         title: 'Saving...',
@@ -441,13 +375,8 @@
     
                 } catch (error) {
                     console.error('Submission error:', error);
-                    Toastify({
-                        text: error.message || "Failed to save product",
-                        duration: 3000,
-                        gravity: "top",
-                        position: "right",
-                        backgroundColor: "#f44336"
-                    }).showToast();
+                    Swal.close();
+                    showError(error.message || "Failed to save product");
                 }
             });
         });

@@ -36,8 +36,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Main checkout form
     const checkoutForm = document.getElementById('checkoutForm');
 
-    // Edit address button functionality - now handled in attachAddressEventListeners
-
     // Add address form submission
     if (addForm) {
         addForm.addEventListener('submit', async function (e) {
@@ -248,9 +246,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isProcessing) return;
 
             const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked').value;
-            // Read the raw numeric data-value attribute rather than parsing the display text
-            // ("Rs. 99.00") — the display formatting is free to change without silently
-            // breaking order totals sent to the server (this broke exactly that way before).
+
             const subTotal = parseFloat(document.getElementById('subTotal')?.dataset.value) || 0;
 
             const discountElement = document.getElementById('discount');
@@ -553,8 +549,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Renders the Apply/Remove button for the current coupon state and (re)binds its handler —
-    // needed every time because swapping innerHTML drops any previously attached listener.
     function renderCouponActionSlot(appliedCouponId) {
         couponForm.dataset.appliedCouponId = appliedCouponId || '';
 

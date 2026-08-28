@@ -1,0 +1,24 @@
+<%
+    // Include this partial with a local `breadcrumbs` array of { label, url }
+    // entries for the trail after "Dashboard" (which is prepended automatically).
+    // Omit `url` on an entry, or leave `breadcrumbs` empty (e.g. on the
+    // Dashboard page itself), to render it as the current, non-linked page.
+    const __crumbs = (typeof breadcrumbs !== 'undefined' && Array.isArray(breadcrumbs)) ? breadcrumbs : [];
+    const __trail = [{ label: 'Dashboard', url: '/admin/dashboard' }, ...__crumbs];
+%>
+<nav aria-label="Breadcrumb" class="mb-4 md:mb-6">
+    <ol class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
+        <% __trail.forEach((crumb, i) => {
+            const isLast = i === __trail.length - 1;
+        %>
+        <li class="flex items-center gap-1.5">
+            <% if (i > 0) { %><i class="fas fa-chevron-right text-[10px] text-gray-300"></i><% } %>
+            <% if (!isLast && crumb.url) { %>
+                <a href="<%= crumb.url %>" class="text-gray-500 hover:text-indigo-600 transition-colors"><%= crumb.label %></a>
+            <% } else { %>
+                <span class="text-gray-700 font-medium" aria-current="page"><%= crumb.label %></span>
+            <% } %>
+        </li>
+        <% }) %>
+    </ol>
+</nav>

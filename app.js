@@ -65,6 +65,18 @@ app.use((err, req, res, next) => {
     const message = err.message || "Internal Server error";
     console.error(`Error: ${message}, statusCode :${statusCode}`);
 
+    if (err.name === 'MulterError') {
+        const multerMessages = {
+            LIMIT_FILE_SIZE: 'Each image must be less than 5MB.',
+            LIMIT_FILE_COUNT: 'Too many images uploaded.',
+            LIMIT_UNEXPECTED_FILE: 'Too many images, or an unexpected upload field.',
+        };
+        return res.status(400).json({
+            success: false,
+            message: multerMessages[err.code] || 'Image upload failed. Please try again.'
+        });
+    }
+
     if (err.isOperational) {
         return res.status(statusCode).json({
             success: false,
