@@ -251,9 +251,7 @@
 
 
             function updatePagination(totalPages, currentPage) {
-                // Was `.flex.space-x-2`, which matches nothing in the actual pagination markup
-                // (`<ul id="usersPaginationList" class="inline-flex items-center ...">`) — so
-                // pagination silently stopped updating after any AJAX search.
+
                 const nav = document.getElementById('usersPaginationList');
                 nav.innerHTML = '';
 

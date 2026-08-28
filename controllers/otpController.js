@@ -6,7 +6,15 @@ import AppError from "../utils/errorHandler.js";
 import { CONFIG } from "../utils/constants/envConfig.js";
 import { AUTH_ERRORS } from "../utils/constants/errorMessages.js";
 import { STATUS } from "../utils/constants/statusCodes.js";
+import { OTP_EXPIRY_SECONDS } from "../utils/constants/otp.js";
 import { getReferralReward } from "../services/referralReward.js";
+
+const maskEmail = (email = '') => {
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return email;
+    const visible = name.slice(0, Math.min(2, name.length));
+    return `${visible}${'*'.repeat(Math.max(name.length - visible.length, 3))}@${domain}`;
+};
 
 export const sendOTP = async (email) => {
     try {
@@ -63,13 +71,26 @@ export const sendOTP = async (email) => {
 
 export const otpVerifyGet = async (req, res, next) => {
     try {
-        //UPDATE EMAIL AND  SIGNUP ARE WORK HERE
-        if (req.session.temp || req.session.update) {
-            return res.render("user/otp")
+        if (!req.session.temp && !req.session.update) {
+            return res.redirect('/signup')
         }
-        return res.status(404)
+
+        const email = req.session.update ? req.session.updateNew : req.session.temp.email
+
+        const latestOtp = email
+            ? await OTP.findOne({ email }).sort({ createdAt: -1 })
+            : null
+        const elapsedSeconds = latestOtp ? Math.floor((Date.now() - latestOtp.createdAt.getTime()) / 1000) : OTP_EXPIRY_SECONDS
+        const remainingSeconds = Math.max(0, OTP_EXPIRY_SECONDS - elapsedSeconds)
+
+        return res.render("user/otp", {
+            maskedEmail: email ? maskEmail(email) : '',
+            remainingSeconds,
+            otpExpirySeconds: OTP_EXPIRY_SECONDS
+        })
     } catch (error) {
         console.log("otp verification : ", error.message)
+        return next(new AppError(`OTP verification page failed: ${error.message}`, STATUS.INTERNAL_SERVER_ERROR))
     }
 }
 
@@ -80,11 +101,12 @@ export const otpVerifyPost = async (req, res, next) => {
         console.log("otp : ", otp)
 
         if (!req.session.temp && !req.session.update) {
-            return res.status(STATUS.BAD_REQUEST).json({ 
+            return res.status(STATUS.BAD_REQUEST).json({
                 success: false,
-                message: AUTH_ERRORS.SESSION_EXPIRED
+                message: AUTH_ERRORS.SESSION_EXPIRED,
+                redirect: '/signup'
             })
-        } 
+        }
 
         ///FOR UPDATE EMAIL
         if (req.session.update) {
@@ -96,15 +118,15 @@ export const otpVerifyPost = async (req, res, next) => {
 
             // console.log("getOtp : ", getOtp)
 
-            // if (!getOtp[0].otp.length==0) {
-            //     return res.status(400).json({
-            //         success: false,
-            //         message: "Otp is not valid"
-            //     })
-            // } 
+            if (!getOtp || getOtp.length === 0) {
+                return res.status(STATUS.BAD_REQUEST).json({
+                    success: false,
+                    message: AUTH_ERRORS.INVALID_OTP
+                })
+            }
 
-            //EXPIRY TIME (30 seconds)
-            if (Date.now() - getOtp[0].createdAt.getTime() > 30 * 1000) {
+            //EXPIRY TIME
+            if (Date.now() - getOtp[0].createdAt.getTime() > OTP_EXPIRY_SECONDS * 1000) {
                 return res.status(STATUS.BAD_REQUEST).json({
                     success: false,
                     message: AUTH_ERRORS.OTP_EXPIRED
@@ -150,8 +172,8 @@ export const otpVerifyPost = async (req, res, next) => {
             })
         }
 
-        //EXPIRY TIME (30 seconds)
-        if (Date.now() - getOtp[0].createdAt.getTime() > 30 * 1000) {
+        //EXPIRY TIME
+        if (Date.now() - getOtp[0].createdAt.getTime() > OTP_EXPIRY_SECONDS * 1000) {
             return res.status(STATUS.BAD_REQUEST).json({
                 success: false,
                 message: AUTH_ERRORS.OTP_EXPIRED

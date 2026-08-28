@@ -156,12 +156,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             console.log(result, 'result fetch')
 
-            // The redirect used to fire unconditionally even if result.success came back
-            // false — harmless today since the backend never returns 200 with success:false,
-            // but a page navigating away on a failure response it never actually checked was
-            // one bad response shape away from silently sending someone to a broken page.
             if (result.success) {
-                localStorage.setItem("otpToken", result?.token)
                 notyf.success(result.message)
                 setTimeout(() => {
                     window.location.href = result.redirect

@@ -6,7 +6,6 @@ import {
 
 } from "../controllers/otpController.js"
 import { renderEmailVerify } from "../controllers/user/userController.js"
-import jwt from "jsonwebtoken"
 
 const router = express.Router()
 
@@ -15,34 +14,32 @@ router.post('/otp-verify', otpVerifyPost)
 
 router.post("/send-otp", async (req, res) => {
     try {
-        const { token } = req.body;
-        // console.log(1,token)
-
-        if (!token) {
+        if (!req.session.temp && !req.session.update) {
             return res.status(400).json({
                 success: false,
-                message: "Token is missing",
+                message: "Your session has expired. Please start over.",
+                redirect: '/signup'
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        if (!decoded.email) {
+        const email = req.session.update ? req.session.updateNew : req.session.temp.email
+        if (!email) {
             return res.status(400).json({
                 success: false,
-                message: "Token not contain email",
+                message: "Your session has expired. Please start over.",
+                redirect: '/signup'
             });
         }
 
-        const result = await sendOTP(decoded.email);
+        const result = await sendOTP(email);
 
-        return res.status(200).json(result);
+        return res.status(result.success ? 200 : 400).json(result);
 
     } catch (error) {
         console.error("Error in send-otp route:", error.message);
         return res.status(500).json({
             success: false,
             message: "Failed to send OTP",
-            error: error.message,
         });
     }
 });

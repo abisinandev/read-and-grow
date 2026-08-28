@@ -1,6 +1,8 @@
-<!-- Navbar for signed-out visitors — mirrors navBar.ejs's icon layout so the header
-     looks the same whether or not you're logged in. Shop/Wishlist/Cart prompt login
-     instead of navigating, since those pages require an account. -->
+<!-- Navbar for signed-out visitors. Deliberately does NOT mirror navBar.ejs's
+     Shop/Wishlist/Cart/Account icon row — every one of those routes requires a login in
+     this app, so showing them to a guest just means every icon pops a "please login"
+     prompt on click, which reads as broken functionality rather than what it actually is.
+     A clear Login / Sign up pair says the same thing honestly. -->
 <nav class="bg-white shadow-sm sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex flex-col sm:flex-row items-center justify-between h-auto sm:h-16 py-4 sm:py-0">
@@ -33,19 +35,13 @@
                 </div>
             </div>
 
-            <!-- Navigation Icons -->
+            <!-- Account actions -->
             <div class="flex items-center space-x-4 sm:space-x-6">
-                <button onclick="pleaseLogin()" class="text-gray-600 hover:text-gray-900 transition-colors duration-200" aria-label="Shop">
-                    <i class="fas fa-store text-lg sm:text-xl"></i>
-                </button>
-                <button onclick="pleaseLogin()" class="text-gray-600 hover:text-gray-900 transition-colors duration-200" aria-label="Wishlist">
-                    <i class="fas fa-heart text-lg sm:text-xl"></i>
-                </button>
-                <button onclick="pleaseLogin()" class="text-gray-600 hover:text-gray-900 transition-colors duration-200" aria-label="Shopping cart">
-                    <i class="fas fa-shopping-cart text-lg sm:text-xl"></i>
-                </button>
-                <a href="/login" class="text-gray-600 hover:text-gray-900 transition-colors duration-200" aria-label="Login">
-                    <i class="fas fa-user text-lg sm:text-xl"></i>
+                <a href="/login" class="text-sm sm:text-base font-medium text-gray-600 hover:text-gray-900 transition-colors duration-200">
+                    Login
+                </a>
+                <a href="/signup" class="text-sm sm:text-base font-medium bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors duration-200">
+                    Sign Up
                 </a>
             </div>
         </div>
