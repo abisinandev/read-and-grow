@@ -31,13 +31,14 @@ const storage = multer.diskStorage({
     }
 })
 
-const fileFilter = (req,file,cb) =>{
-    if(FILE_TYPE_MAP[file.mimetype]){
-        cb(null,true)
+const fileFilter = (req, file, cb) => {
+    if (FILE_TYPE_MAP[file.mimetype]) {
+        return cb(null, true);
     }
-    // else{
-    //     cb(new AppError('Invalid file type'),false)
-    // }
+    return cb(
+        new AppError(`Invalid file type "${file.mimetype}". Only JPG, JPEG, PNG and WEBP images are allowed.`, 400),
+        false
+    );
 }
 
 const upload = multer({

@@ -18,6 +18,7 @@
   <%- include("../partials/admin/adminSideBar.ejs") %>
 
     <div class="p-4 pt-20 md:pt-4 flex-1 flex flex-col overflow-x-hidden min-w-0">
+      <%- include("../partials/admin/breadcrumb.ejs", { breadcrumbs: [{ label: 'Orders', url: '/admin/orders' }, { label: 'Order Details' }] }) %>
       <div class="flex justify-between items-center mb-4">
         <h1 class="text-2xl font-bold text-gray-800">Order Details - #<%= order.orderId %>
         </h1>
@@ -112,9 +113,16 @@
                   </div>
                   <% } %>
 
+                    <%
+                      const allItemsSettled = order.items.every(item => item.status === 'Cancelled' || item.status === 'Returned');
+                      const originalTotal = (order.subTotal || 0) + (order.shippingCharge || 0) - (order.discount || 0) - (order.coupon ? order.coupon.discountValue : 0);
+                      const displayTotal = allItemsSettled ? originalTotal : (order.totalAmount || 0);
+                    %>
                     <div class="flex justify-between items-center border-t pt-4 mt-4">
                       <span class="text-sm font-bold text-gray-700">Total:</span>
-                      <span class="text-sm font-bold text-green-700">Rs. <%= (order?.totalAmount).toFixed(2) %></span>
+                      <span class="text-sm font-bold text-green-700">
+                        Rs. <%= displayTotal.toFixed(2) %><% if (allItemsSettled) { %><span class="text-xs font-normal text-gray-500 ml-1">(Refunded)</span><% } %>
+                      </span>
                     </div>
 
           </div>
@@ -157,8 +165,6 @@
                   </p>
                 </div>
               <% } else { %>
-                <!-- The saved address can be deleted by the customer after ordering — this used
-                     to crash the page trying to read firstName/street/etc off null. -->
                 <p class="text-sm text-yellow-700">⚠️ Delivery address information is not available for this order.</p>
               <% } %>
             </div>
@@ -204,12 +210,6 @@
             </div>
 
             <%
-              /* The amount actually charged for this line — price x quantity, minus any
-                 per-line product/category offer discount that was applied at order time
-                 (order.items[index].discountPrice, same field the refund calculations
-                 elsewhere already use). This used to just show the raw unit price ignoring
-                 both quantity and any discount, and always labeled it "Paid amount" even for
-                 a still-Pending, not-yet-paid item. */
               const lineItem = order.items[index];
               const lineTotal = lineItem.price * lineItem.quantity;
               const displayAmount = lineItem.discountPrice > 0 ? lineTotal - lineItem.discountPrice : lineTotal;
@@ -223,13 +223,9 @@
           </div>
         </div>
         <% } else { %>
-          <!-- The product this item refers to has since been deleted from the catalog — this
-               used to crash trying to read images/name/category off null. -->
           <p class="text-sm text-gray-500 italic">This product is no longer available in the catalog.</p>
         <% } %>
 
-        <!-- Accept and Reject Buttons — about the ORDER ITEM, not the product, so these still
-             work even when the product above is gone. -->
         <% if(order.items[index].isRequested || order.items[index].isReturned || order.items[index].isCancelled)
           { %>
           <div class="border border-red-400 bg-red-50 p-3 rounded-lg mt-3">

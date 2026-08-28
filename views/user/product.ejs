@@ -10,11 +10,7 @@
     <link rel="stylesheet" href="/css/magnifieProduct.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- Font Awesome for stars -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="/js/user/shop.js" defer></script>
     <script src="/js/user/showMessage.js" ></script>
@@ -70,7 +66,7 @@
                 <h2 class="text-lg text-gray-600 mb-4">by <%= product.authorName %></h2>
            
                 <div class="flex items-center mb-4">
-                    <div class="text-yellow-400 space-x-1">
+                    <div class="text-yellow-400 space-x-1" id="product-rating-stars">
                         <% for (let i = 0; i < 5; i++) { %>
                             <% if( i < Math.floor(product.rating)){ %>
                                 <i class="fas fa-star"></i>
@@ -79,7 +75,10 @@
                             <% } %>
                         <% } %>
                     </div>
-                    <span class="text-gray-500 ml-2 text-sm"><%= product.rating || 0 %> ratings</span>
+                    <span class="text-gray-500 ml-2 text-sm" id="product-rating-summary">
+                        <%= (product.rating || 0).toFixed(1) %> out of 5
+                        <%= reviews && reviews.length ? `(${reviews.length} rating${reviews.length === 1 ? '' : 's'})` : '(no ratings yet)' %>
+                    </span>
                 </div>
                 <p class="text-xl font-bold text-gray-900">
                     Price: <%= product.price %>
@@ -132,11 +131,11 @@
         <div class="mb-4">
             <label class="block text-gray-700 font-medium mb-2">Rate this product:</label>
             <div class="flex space-x-1" id="rating-stars">
-              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="1"></i>
-              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="2"></i>
-              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="3"></i>
-              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="4"></i>
-              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="5"></i>
+              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="1" onclick="selectRating(1)" onmouseenter="previewRating(1)"></i>
+              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="2" onclick="selectRating(2)" onmouseenter="previewRating(2)"></i>
+              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="3" onclick="selectRating(3)" onmouseenter="previewRating(3)"></i>
+              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="4" onclick="selectRating(4)" onmouseenter="previewRating(4)"></i>
+              <i class="fas fa-star text-gray-300 text-xl cursor-pointer transition duration-150" data-value="5" onclick="selectRating(5)" onmouseenter="previewRating(5)"></i>
             </div>
             <input type="hidden" name="rating" id="rating-value" value="0">
             <button id="submit-rating" data-product-id="<%= product._id %>" class="mt-3 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-800 transition">
@@ -154,8 +153,9 @@
         <!-- Review List -->
         <div class="mt-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Customer Reviews</h3>
-            <% if (reviews && reviews.length > 0) { %>
-                <% reviews.forEach(review => { %>
+            <% const writtenReviews = (reviews || []).filter(review => review.comment && review.comment.trim()); %>
+            <% if (writtenReviews.length > 0) { %>
+                <% writtenReviews.forEach(review => { %>
                     <div class="border-t border-gray-200 pt-4 mt-4">
                         <span class="ml-2 flex items-center text-gray-500 text-sm">
                             <i class="fas fa-user text-gray-400 mr-1"></i> <!-- User icon -->
@@ -302,87 +302,114 @@
             img.addEventListener('touchend', () => lens.classList.add('hidden'));
         }
 
-        let userRating = 0
-        document.getElementById('submit-rating').addEventListener('click', function () {
-        const productId = this.getAttribute('data-product-id')
+        let userRating = 0;
+        const ratingStars = Array.from(document.querySelectorAll('#rating-stars i'));
+        const ratingValueInput = document.getElementById('rating-value');
 
-        Swal.fire({
-            title: 'Rate this item',
-            html: `
-            <div style="font-size: 24px; color: gold;">
-                <i class="fa fa-star" onclick="setRating(1)">★</i>
-                <i class="fa fa-star" onclick="setRating(2)">★</i>
-                <i class="fa fa-star" onclick="setRating(3)">★</i>
-                <i class="fa fa-star" onclick="setRating(4)">★</i>
-                <i class="fa fa-star" onclick="setRating(5)">★</i>
-            </div>
-            `,
-            showCancelButton: true,
-            showConfirmButton: false,
-            didOpen: () => {
-            window.setRating = function (rating) {
-                userRating = rating;
-                Swal.close();
+        function paintRatingStars(value) {
+            ratingStars.forEach(star => {
+                const filled = Number(star.dataset.value) <= value;
+                star.classList.toggle('text-yellow-400', filled);
+                star.classList.toggle('text-gray-300', !filled);
+            });
+        }
+
+        window.selectRating = function (value) {
+            userRating = value;
+            ratingValueInput.value = userRating;
+            paintRatingStars(userRating);
+        };
+
+        window.previewRating = function (value) {
+            paintRatingStars(value);
+        };
+
+        document.getElementById('rating-stars').onmouseleave = () => paintRatingStars(userRating);
+
+        function updateProductRatingDisplay(averageRating, ratingCount) {
+            const headerStars = document.querySelectorAll('#product-rating-stars i');
+            headerStars.forEach((star, i) => {
+                const filled = i < Math.floor(averageRating);
+                star.classList.toggle('fas', filled);
+                star.classList.toggle('far', !filled);
+            });
+            const summary = document.getElementById('product-rating-summary');
+            if (summary && typeof ratingCount === 'number') {
+                summary.textContent = `${averageRating.toFixed(1)} out of 5 (${ratingCount} rating${ratingCount === 1 ? '' : 's'})`;
+            }
+        }
+
+        document.getElementById('submit-rating').addEventListener('click', async function () {
+            const productId = this.getAttribute('data-product-id');
+
+            if (!userRating) {
+                Swal.fire('Pick a rating', 'Click a star above to choose your rating first.', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/rate-product/${productId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rating: userRating })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    Swal.fire('Oops!', data.message || 'Something went wrong.', 'error');
+                    return;
+                }
 
                 Swal.fire({
-                icon: 'success',
-                title: 'Thanks!',
-                text: `You rated ${rating} star${rating > 1 ? 's' : ''}.`
+                    icon: 'success',
+                    title: 'Thanks!',
+                    text: `You rated ${userRating} star${userRating > 1 ? 's' : ''}.`
                 });
-
-
-                fetch(`/rate-product/${productId}`, { 
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ rating: userRating })
-                })
-                .then(res => res.json())
-                .then(data => console.log('Server response:', data))
-                .catch(error => console.error('Error posting rating:', error));
-            };
+                if (typeof data.rating === 'number') updateProductRatingDisplay(data.rating, data.ratingCount);
+            } catch (error) {
+                console.error('Error posting rating:', error);
+                Swal.fire('Error', 'Failed to submit your rating. Please try again.', 'error');
             }
-        });
         });
 
         document.getElementById('submit-feedback').addEventListener('click', async function () {
-            const review = document.getElementById('review-text').value;
-            const productId = this.getAttribute('data-product-id')
+            const review = document.getElementById('review-text').value.trim();
+            const productId = this.getAttribute('data-product-id');
 
-            console.log(review);
+            if (!userRating) {
+                Swal.fire('Pick a rating', 'Click a star above to rate this product before submitting your review.', 'warning');
+                return;
+            }
             if (!review || review.length < 5) {
                 Swal.fire('Invalid Feedback', 'Please enter a review of at least 5 characters.', 'warning');
                 return;
             }
             try {
-                const response = await fetch('/add-review', { 
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                   
-                },
-                body: JSON.stringify({
-                    review: review,
-                    productId: productId, 
-                    rating: userRating  
-                })
+                const response = await fetch('/add-review', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        review: review,
+                        productId: productId,
+                        rating: userRating
+                    })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                console.log('Review submitted:', data);
-                Swal.fire('Thank you!', 'Your feedback was submitted successfully!', 'success');
+                    Swal.fire('Thank you!', 'Your feedback was submitted successfully!', 'success');
+                    if (typeof data.rating === 'number') updateProductRatingDisplay(data.rating, data.ratingCount);
+                    document.getElementById('review-text').value = '';
                 } else {
-                console.error('Failed:', data.message);
-                Swal.fire('Oops!', data.message || 'Something went wrong!', 'error');
+                    console.error('Failed:', data.message);
+                    Swal.fire('Oops!', data.message || 'Something went wrong!', 'error');
                 }
             } catch (error) {
                 console.error('Error posting review:', error);
                 Swal.fire('Error', 'Failed to submit feedback. Please try again.', 'error');
             }
-            });
+        });
 
         // Initialize magnification when the page loads
         document.addEventListener('DOMContentLoaded', setupMagnification);

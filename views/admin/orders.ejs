@@ -20,6 +20,7 @@
 
     <!-- Main Content -->
     <div class="p-4 pt-20 md:pt-6 sm:p-6 md:pt-6 flex-1 min-w-0">
+        <%- include("../partials/admin/breadcrumb.ejs", { breadcrumbs: [{ label: 'Orders' }] }) %>
         <header class="bg-white shadow-sm rounded-xl mb-6">
             <div class="flex justify-between items-center px-6 py-4">
                 <h1 class="text-2xl font-semibold text-gray-800">Order Management</h1>
@@ -69,6 +70,19 @@
                                     else if (order.items && order.items.status === "Cancelled") { statusClass = "bg-red-100 text-red-800"; }
                                     else if (order.items && order.items.status === "Returned") { statusClass = "bg-purple-100 text-purple-800"; }
                                     else { statusClass = "bg-gray-100 text-gray-800"; } %>
+                                <%
+                                    // order.totalAmount is the whole ORDER's live remaining balance (it's
+                                    // decremented as items get cancelled/returned, correctly netting to 0
+                                    // once every item is settled) — but this row is a single ITEM after the
+                                    // $unwind above, so showing totalAmount here both (a) repeats the same
+                                    // whole-order figure on every item row of a multi-item order, and (b)
+                                    // reads as "Rs. 0.00 charged" for a cancelled item instead of what the
+                                    // customer actually paid/was refunded for it. The item's own price/
+                                    // quantity/discountPrice are never mutated by cancellation, so they
+                                    // reliably reconstruct what this specific line item was worth.
+                                    const lineItem = order.items || {};
+                                    const itemAmount = ((lineItem.price || 0) - (lineItem.discountPrice || 0)) * (lineItem.quantity || 0);
+                                %>
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-4 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900"><%= order.orderId %></div>
@@ -97,7 +111,7 @@
                                         </div>
                                     </td>
                                     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        Rs. <%= Number(order.totalAmount || 0).toFixed(2) %>
+                                        Rs. <%= itemAmount.toFixed(2) %>
                                     </td>
                                     <td class="px-4 py-4 whitespace-nowrap">
                                         <span class="text-xs font-semibold px-2.5 py-1 rounded-full <%= statusClass %>">

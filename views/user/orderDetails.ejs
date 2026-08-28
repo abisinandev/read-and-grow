@@ -94,13 +94,6 @@
                   <% } %>
 
                     <%
-                      // order.totalAmount is decremented live as items get cancelled/returned —
-                      // that's correct and intentional (admin sales reports sum it as current
-                      // revenue), but it means a fully-refunded order nets to exactly 0, which
-                      // reads as a broken/blank price rather than "this was refunded". Since
-                      // subTotal/shippingCharge/discount/coupon are never mutated by
-                      // cancellation, the original charged amount is always reconstructable
-                      // from them for display purposes, without touching totalAmount itself.
                       const allItemsSettled = orderedProducts.every(item => item.status === 'Cancelled' || item.status === 'Returned');
                       const originalTotal = (order.subTotal || 0) + (order.shippingCharge || 0) - (order.discount || 0) - (order.coupon ? order.coupon.discountValue : 0);
                     %>
@@ -229,7 +222,7 @@
             <% } %>
               <% if(order.paymentStatus==='failed' ){ %>
                 <button id="retryPayment" data-order-id="<%= order._id %>"
-                  class="return-btn bg-green-400 align-end hover:bg-red-400 text-white font-semibold py-3 px-6 shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1">
+                  class="bg-green-400 align-end hover:bg-red-400 text-white font-semibold py-3 px-6 shadow-md hover:shadow-lg transition duration-300 transform hover:-translate-y-1">
                   Retry payment
                 </button>
                 <% } %>
@@ -258,8 +251,7 @@
           }
         }).showToast();
       }
-      // Mirrors the status -> style mapping already used server-side in the EJS, so an item's
-      // row can be updated to its new status in place instead of reloading the page.
+
       function itemStatusPresentation(status) {
         if (status === 'Pending') return { textClass: 'text-yellow-500', icon: 'fas fa-clock text-yellow-500' };
         if (status === 'Shipped') return { textClass: 'text-blue-500', icon: 'fas fa-truck text-blue-500' };
@@ -275,8 +267,6 @@
         return 'text-gray-900 font-semibold';
       }
 
-      // Updates one item row's status text/icon in place and removes its action buttons
-      // (Cancel/Return no longer apply once an item is cancelled or return-requested).
       function updateItemRow(row, newStatus) {
         const { textClass, icon } = itemStatusPresentation(newStatus);
         const statusText = row.querySelector('[data-item-status-text]');
@@ -291,12 +281,6 @@
         if (actions) actions.innerHTML = '';
       }
 
-      // order.totalAmount correctly nets to 0 once every item is cancelled/returned (it's the
-      // amount still owed, and admin sales reports rely on that), but showing "Rs. 0.00" reads
-      // as a broken price rather than "this was refunded". Once every item row is settled,
-      // switch the display to the original charged amount (embedded server-side, since it's
-      // reconstructed from fields cancellation never mutates) with a "(Refunded)" label,
-      // instead of the live totalAmount the cancel response returns.
       function refreshOrderTotalDisplay(liveTotalAmount) {
         const totalEl = document.getElementById('x');
         if (!totalEl) return;
@@ -459,7 +443,6 @@
                 name: 'Read-and-grow',
                 description: 'Transaction',
                 order_id: order.id,
-                callback_url: 'readandgrow.space/success',
                 prefill: {
                   name: 'Abisinan',
                   email: 'abisinanabisinan9@gmail.com',
@@ -481,10 +464,7 @@
                     })
                   }).then(res => res.json())
                     .then(data => {
-                      // Only mark the order paid once Razorpay's signature actually verified —
-                      // this previously called retryPayment() unconditionally regardless of
-                      // what /verify-payment returned, so a failed/tampered verification would
-                      // still mark the order "paid" and decrement stock.
+
                       if (data.status === 'Ok') {
                         retryPayment(orderId);
                       } else {
@@ -538,7 +518,20 @@
               return
             }
 
-            return location.reload()
+            const newStatus = result.paymentStatus || 'paid';
+            const badge = document.getElementById('paymentStatusBadge');
+            if (badge) {
+              badge.textContent = newStatus;
+              badge.className = paymentStatusClass(newStatus);
+            }
+            const retryBtn = document.getElementById('retryPayment');
+            if (retryBtn) retryBtn.remove();
+
+            Swal.fire({
+              title: result.message || 'Payment successful',
+              text: 'Your payment has been completed.',
+              icon: 'success'
+            });
 
           } catch (error) {
             console.log(error.message)
@@ -546,11 +539,6 @@
           }
         }
 
-
-        // querySelectorAll+forEach, not getElementById — an order can have more than one
-        // delivered item eligible for return, and each renders its own .return-btn. The old
-        // getElementById('returnOrder') only ever wired up the FIRST such button (and threw if
-        // there were none at all), so Return silently did nothing for any item after the first.
         document.querySelectorAll('.return-btn').forEach(button => {
         button.addEventListener('click', async function () {
           const orderId = this.getAttribute('data-order-id');
@@ -612,9 +600,6 @@
               return;
             }
 
-            // SUCCESS — reveal the "Return requested" note and remove the Return button in
-            // place, no reload. The item's own status stays 'Delivered' until an admin
-            // actually processes the return, so only the request-pending state changes here.
             const row = this.closest('[data-item-row]');
             if (row) {
               const note = row.querySelector('[data-item-return-note]');

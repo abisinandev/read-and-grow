@@ -30,7 +30,8 @@ const productSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    rating: { type: Number },
+
+    rating: { type: Number, min: 0, max: 5, default: 0 },
     offers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Offer" }],
     bestOffer: { type: Number }
 

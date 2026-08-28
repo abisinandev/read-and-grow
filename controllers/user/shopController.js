@@ -1,3 +1,4 @@
+import mongoose from "mongoose"
 import User from "../../models/userSchema.js"
 import jwt from "jsonwebtoken"
 import AppError from "../../utils/errorHandler.js"
@@ -10,7 +11,6 @@ import Offer from "../../models/offersSchema.js"
 import Review from "../../models/reviewSchema.js"
 import { CONFIG } from "../../utils/constants/envConfig.js"
 
-// ESCAPES REGEX SPECIAL CHARS SO USER-SUPPLIED FILTER VALUES CAN'T BREAK/INJECT INTO A $regex QUERY
 const escapeRegExp = (string = '') => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 
@@ -37,7 +37,7 @@ export const renderHomePage = async (req, res, next) => {
             }
         }
 
-        //FOR SHOWING MOST SELLED PRODUCTS 
+        //FOR SHOWING MOST SELLED PRODUCTS
         const orders = await Order?.aggregate([
             { $match: { isBlocked: { $ne: true } } },
             { $unwind: "$items" },
@@ -49,11 +49,34 @@ export const renderHomePage = async (req, res, next) => {
         const products = []
         for (let order of orders) {
             const product = await Product?.findById(order?._id)
-            products.push(product)
+            if (product && !product.isBlocked) products.push(product)
         }
 
-        console.log(products)//DEBUG
-        return res.render('user/home', { products, user })
+        const [managedCategories, rawCategoryValues, wishlist] = await Promise.all([
+            Category.find({ status: { $ne: "inactive" } }),
+            Product.distinct('category', { isBlocked: { $ne: true } }),
+            user ? Wishlist?.findOne({ userId: user.id }) : null
+        ]);
+
+        const activeCategoryNames = new Set(managedCategories.map(c => c.categoryName.trim().toLowerCase()));
+        const hasManagedCategories = activeCategoryNames.size > 0;
+        const categoryMap = new Map();
+        rawCategoryValues.forEach(value => {
+            if (!value) return;
+            const trimmed = value.trim();
+            const key = trimmed.toLowerCase();
+            if (!trimmed) return;
+            if (hasManagedCategories && !activeCategoryNames.has(key)) return;
+            if (!categoryMap.has(key)) categoryMap.set(key, trimmed);
+        });
+        const categories = Array.from(categoryMap.values())
+            .sort((a, b) => a.localeCompare(b))
+            .slice(0, 6)
+            .map(categoryName => ({ categoryName }));
+
+        const wishlistProductIds = (wishlist?.items || []).map(item => item.productId.toString());
+
+        return res.render('user/home', { products, user, categories, wishlistProductIds })
 
     } catch (error) {
         return next(new AppError(`User Dashboard failed : ${error} `, 500))
@@ -158,9 +181,6 @@ export const renderShopPage = async (req, res, next) => {
         let query = { isBlocked: { $ne: true } };//QUERYING DATA SET TO AN OBJECT FOR SIMPLYFING CODE WE CAN ALSO SET WRITE MANUALLY MONGODB
 
         if (category) {
-            // TRIMMED, CASE-INSENSITIVE, ANCHORED MATCH — product.category values in the DB
-            // are inconsistently saved with stray whitespace/casing (e.g. "Personal Growth "
-            // vs "Personal Growth"), so a strict equality check silently dropped real matches.
             query.category = { $regex: '^' + escapeRegExp(category.trim()) + '\\s*$', $options: 'i' };
         }
 
@@ -196,11 +216,6 @@ export const renderShopPage = async (req, res, next) => {
         if (sort === 'price_asc') sortQuery = { price: 1 };
         if (sort === 'price_desc') sortQuery = { price: -1 };
 
-        // All of the following are independent reads — running them sequentially (as this
-        // used to) meant one request paid for 6+ round trips end-to-end, which is why a single
-        // /shop request could take 3+ seconds against a remote DB and made filtering/sorting
-        // feel broken even though each interaction was working. Firing them concurrently
-        // collapses that into the cost of the single slowest query instead of the sum of all.
         const [
             products,
             managedCategories,
@@ -211,18 +226,11 @@ export const renderShopPage = async (req, res, next) => {
         ] = await Promise.all([
             Product.find(query).sort(sortQuery).skip(skip).limit(limit),
 
-            // FOR FETCHING THE CATEGORY FILTER LIST DIRECTLY FROM THE PRODUCT CATALOG.
-            // Product.category is a free-text string (not a ref to Category), and the managed
-            // Category collection can be empty/out of sync with it, which left the sidebar with
-            // no category options at all. Deriving from real product data, trimmed + deduped
-            // case-insensitively, keeps the filter list always accurate and non-empty.
             Category.find({ status: { $ne: "inactive" } }),
             Product.distinct('category', { isBlocked: { $ne: true } }),
 
-            // FOR FETCHING ALL AUTHORS ACROSS THE WHOLE CATALOG (NOT JUST THE CURRENT PAGE)
             Product.distinct('authorName', { isBlocked: { $ne: true } }),
 
-            // FOR FIND WISHLIST ALREADY INCLUDED PRODUCT
             user ? Wishlist?.findOne({ userId: user.id }) : null,
 
             Product.countDocuments(query)
@@ -237,7 +245,6 @@ export const renderShopPage = async (req, res, next) => {
             const trimmed = value.trim();
             const key = trimmed.toLowerCase();
             if (!trimmed) return;
-            // if categories are actively managed, respect admin's active/inactive setting
             if (hasManagedCategories && !activeCategoryNames.has(key)) return;
             if (!categoryMap.has(key)) categoryMap.set(key, trimmed);
         });
@@ -245,7 +252,6 @@ export const renderShopPage = async (req, res, next) => {
             .sort((a, b) => a.localeCompare(b))
             .map(categoryName => ({ categoryName }));
 
-        // Batched into a single query instead of one findById per wishlist item (N+1).
         let wishlistItems = [];
         if (wishlist?.items?.length) {
             const wishlistProductIds = wishlist.items.map(item => item.productId);
@@ -350,21 +356,44 @@ export const sortProducts = async (req, res, next) => {
 };
 
 
-export const rateProduct = async (req, res) => {
+const recalculateProductRating = async (productId) => {
+    const [result] = await Review.aggregate([
+        { $match: { product: new mongoose.Types.ObjectId(productId) } },
+        { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } }
+    ]);
+    const averageRating = result ? Math.round(result.avg * 10) / 10 : 0;
+    const ratingCount = result ? result.count : 0;
+    await Product.findByIdAndUpdate(productId, { $set: { rating: averageRating } });
+    return { averageRating, ratingCount };
+};
+
+export const rateProduct = async (req, res, next) => {
     try {
         const { rating } = req.body
         const productId = req.params.id
-        console.log("rating ", rating)
+        const user = req.user
 
-        const product = await Product.findByIdAndUpdate(
-            productId,
-            {
-                $set: { rating: Number(rating) }
-            }
+        const ratingNum = Number(rating)
+        if (!Number.isFinite(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+            return res.status(400).json({ success: false, message: "Rating must be between 1 and 5" })
+        }
+
+        const product = await Product.findById(productId)
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" })
+        }
+
+        await Review.findOneAndUpdate(
+            { user: user.id, product: productId },
+            { $set: { rating: ratingNum } },
+            { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
         )
-        return res.status(200).json({ success: true, message: "Rated" })
+
+        const { averageRating, ratingCount } = await recalculateProductRating(productId)
+
+        return res.status(200).json({ success: true, message: "Rated", rating: averageRating, ratingCount })
     } catch (error) {
-        console.log(error.message)
+        return next(new AppError(`Rating product failed: ${error.message}`, 500))
     }
 }
 
@@ -373,19 +402,30 @@ export const addReview = async (req, res, next) => {
     try {
         const { review, productId, rating } = req.body
         const user = req.user
+
+        const ratingNum = Number(rating)
+        if (!Number.isFinite(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+            return res.status(400).json({ success: false, message: "Please choose a star rating before submitting your review" })
+        }
+        if (!review || !review.trim() || review.trim().length < 5) {
+            return res.status(400).json({ success: false, message: "Review must be at least 5 characters" })
+        }
+
         const product = await Product.findById(productId)
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" })
+        }
 
-        const add = new Review({
-            user: user.id,
-            product: productId,
-            rating: Number(product.rating),
-            comment: review,
-        })
+        await Review.findOneAndUpdate(
+            { user: user.id, product: productId },
+            { $set: { rating: ratingNum, comment: review.trim() } },
+            { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+        )
 
-        await add.save()
-        console.log('Rivew added')
-        return res.status(200).json({ success: true })
+        const { averageRating, ratingCount } = await recalculateProductRating(productId)
+
+        return res.status(200).json({ success: true, message: "Review submitted", rating: averageRating, ratingCount })
     } catch (error) {
-        console.log(error.message)
+        return next(new AppError(`Adding review failed: ${error.message}`, 500))
     }
 }

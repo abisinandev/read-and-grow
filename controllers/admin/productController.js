@@ -3,19 +3,25 @@ import Product from "../../models/productSchema.js";
 import AppError from "../../utils/errorHandler.js";
 import { imageUploadToCloud } from "../../utils/cloudinary.js";
 
+const NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9\s.,'"&:!()-]{2,99}$/;
+const AUTHOR_REGEX = /^[A-Za-z][A-Za-z\s.'-]{2,49}$/;
+const PRICE_REGEX = /^\d+(\.\d{1,2})?$/;
+const STOCK_REGEX = /^\d+$/;
+
 const validateProductFields = ({ name, description, author, price, stock, category }, validCategoryNames) => {
     if (!name || !name.trim()) return "Product name is required";
-    if (name.trim().length < 3) return "Product name must be at least 3 characters long";
+    if (!NAME_REGEX.test(name.trim())) return "Product name must be 3-100 characters (letters, numbers, spaces and basic punctuation only)";
     if (!description || !description.trim()) return "Description is required";
     if (!author || !author.trim()) return "Author is required";
+    if (!AUTHOR_REGEX.test(author.trim())) return "Author must be 3-50 letters and may include spaces, apostrophes, periods or hyphens";
     if (!category || !category.trim()) return "Category is required";
     if (!validCategoryNames.has(category.trim().toLowerCase())) return "Please select a valid category";
 
-    const priceNum = Number(price);
-    if (price === undefined || price === '' || isNaN(priceNum) || priceNum <= 0) return "Price must be a positive number";
+    const priceStr = String(price ?? '').trim();
+    if (!priceStr || !PRICE_REGEX.test(priceStr) || Number(priceStr) <= 0) return "Price must be a positive number with up to 2 decimal places";
 
-    const stockNum = Number(stock);
-    if (stock === undefined || stock === '' || isNaN(stockNum) || stockNum < 0 || !Number.isInteger(stockNum)) return "Stock must be a non-negative whole number";
+    const stockStr = String(stock ?? '').trim();
+    if (!stockStr || !STOCK_REGEX.test(stockStr)) return "Stock must be a non-negative whole number";
 
     return null;
 };
