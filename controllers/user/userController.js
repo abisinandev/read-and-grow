@@ -384,7 +384,7 @@ export const editProfile = async (req, res, next) => {
 
 export const renderChangePassword = async (req, res, next) => {
     try {
-        const { id } = req.params
+        const { id } = req.user
         const user = await User.findOne({ _id: id })
         if (!user) {
             return res.status(404).json({
@@ -446,17 +446,16 @@ export const changePasswordRequest = async (req, res, next) => {
 
 export const renderChangeEmail = async (req, res, next) => {
     try {
-        const id = req.params
-        const user = await User.findById(id.id)//FIND USER
+        const user = await User.findById(req.user.id)//FIND USER
 
         //IF USER NOT FOUND REDIRECT BACK TO PROFILE
         if (!user) {
-            return res.redirect(`/profile/${id.id}`)
+            return res.redirect('/profile')
         }
 
-        //SET EMAIL TO SESSION 
+        //SET EMAIL TO SESSION
         req.session.update = user.email
-        return res.render("user/editEmail", { id })
+        return res.render("user/editEmail")
 
     } catch (error) {
         next(new AppError(`Change email : ${error}`, 500))
@@ -479,7 +478,7 @@ export const changeEmailRequest = async (req, res, next) => {
 
         const baseUrl = CONFIG.BASE_URL
         //RESET URL IN A VARIBLE
-        const resetURL = `${baseUrl}/new-email/${id.id}`;
+        const resetURL = `${baseUrl}/new-email`;
 
         //SEND REQUEST TO MAILID
         const transporter = nodemailer.createTransport({
@@ -660,9 +659,9 @@ export const editAddress = async (req, res, next) => {
             return res.status(400).json({ success: false, message: "Number must be digits" })
         }
 
-        //UPDATE ADDRESS
-        const updateAddress = await Address.findByIdAndUpdate(
-            addressId,
+        //UPDATE ADDRESS (SCOPED TO THE LOGGED-IN USER SO ONE USER CAN'T EDIT ANOTHER'S ADDRESS)
+        const updateAddress = await Address.findOneAndUpdate(
+            { _id: addressId, userId: user.id },
             {
                 $set: {
                     firstName,

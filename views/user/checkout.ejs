@@ -333,9 +333,6 @@
                     <h3 class="text-lg font-medium mb-4">Add New Delivery Address</h3>
                     <form id="addAddressForm" class="space-y-4">
                         <div class="flex gap-4">
-                            <span id="userId" hidden>
-                                <%= user.id %>
-                            </span>
                             <input type="text" name="firstName" placeholder="First name"
                                 class="w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <input type="text" name="lastName" placeholder="Last name"
@@ -381,9 +378,6 @@
                     <h3 class="text-lg font-medium mb-4">Edit Delivery Address</h3>
                     <form id="editAddressForm" class="space-y-4">
                         <div class="flex gap-4">
-                            <span id="userId" hidden>
-                                <%= user.id %>
-                            </span>
                             <span id="addressId" hidden>
                                 <%= address._id %>
                             </span>
