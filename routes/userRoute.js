@@ -48,25 +48,25 @@ router.get('/email-verify', renderEmailVerify)
 router.post('/requestPasswordReset', requestPasswordReset)
 router.get('/resetPassword', renderResetPassword)
 router.post('/resetPassword', resetPassword)
-router.get('/change-password/:id', userAuth, renderChangePassword)
+router.get('/change-password', userAuth, renderChangePassword)
 router.post('/change-password', userAuth, changePasswordRequest)
-router.get('/change-email/:id', userAuth, renderChangeEmail)
+router.get('/change-email', userAuth, renderChangeEmail)
 router.post('/change-email', userAuth, changeEmailRequest)
-router.get('/new-email/:id', userAuth, renderUpdateMail)
+router.get('/new-email', userAuth, renderUpdateMail)
 router.post('/new-email', userAuth, updateNewMail)
 
 //ADDRESS
-router.get('/address/:id', userAuth, renderAddressPage)
+router.get('/address', userAuth, renderAddressPage)
 router.post('/address', userAuth, addAddress)
-router.put('/address/:userId/:addressId', userAuth, editAddress)
+router.put('/address/:addressId', userAuth, editAddress)
 router.patch('/address/:id/set-default', userAuth, setDefault)
 router.delete('/address/:id', userAuth, deleteAddress)
 router.patch('/address/:id/select-address', selectAddress)
 
 //WALLET
-router.get('/wallet/:id',userAuth,renderWallet)
-router.get('/profile/:id', userAuth, renderProfilePage)
-router.patch('/profile/:id', userAuth, editProfile)
+router.get('/wallet',userAuth,renderWallet)
+router.get('/profile', userAuth, renderProfilePage)
+router.patch('/profile', userAuth, editProfile)
 
 
 //UPLOAD IMAGE

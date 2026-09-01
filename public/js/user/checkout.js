@@ -135,8 +135,6 @@ document.addEventListener('DOMContentLoaded', function () {
             // Reset previous errors
             document.querySelectorAll('.error').forEach(el => el.remove());
 
-            const userIdElement = document.getElementById('userId');
-            const userId = userIdElement ? userIdElement.textContent.trim() : '';
             const addressId = this.getAttribute('data-address-id');
 
             const formData = new FormData(this);
@@ -190,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
             saveEditBtn.innerHTML = 'Saving...';
 
             try {
-                const response = await fetch(`/address/${userId}/${addressId}`, {
+                const response = await fetch(`/address/${addressId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(addressData)
